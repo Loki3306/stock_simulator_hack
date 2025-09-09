@@ -27,6 +27,14 @@ export default {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "#000000",
+        },
+        error: {
+          DEFAULT: "hsl(var(--error))",
+          foreground: "#000000",
+        },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
@@ -84,6 +92,14 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+      },
+      fontFamily: {
+        sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "Helvetica", "Arial", "Apple Color Emoji", "Segoe UI Emoji"],
+        display: ["Space Grotesk", "Inter", "ui-sans-serif", "system-ui"],
+        mono: ["JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"],
+      },
+      boxShadow: {
+        glow: "0 0 12px hsla(var(--primary),0.6), 0 0 32px hsla(var(--primary),0.25)",
       },
     },
   },
