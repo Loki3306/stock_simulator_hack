@@ -68,6 +68,10 @@ export default function Dashboard() {
                 <div className="mt-3">
                   <ChartComponent type="area" data={genSeries(24, 100 + i * 5, 2)} height={90} showTooltips={false} />
                 </div>
+                <div className="mt-3 flex gap-2">
+                  <a href="/builder" className="px-3 py-1.5 text-xs rounded-md border border-white/15">Edit</a>
+                  <a href="/backtest/mock" className="px-3 py-1.5 text-xs rounded-md btn-gradient text-black">Run Backtest</a>
+                </div>
               </div>
             ))}
           </div>
