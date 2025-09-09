@@ -141,4 +141,9 @@
     background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
     border-color: hsla(var(--foreground), 0.12);
   }
+  body[data-reduce-motion="1"] * {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
 }
