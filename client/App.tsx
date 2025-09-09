@@ -18,25 +18,29 @@ import Backtest from "./pages/Backtest";
 
 const queryClient = new QueryClient();
 
+import { AuthProvider } from "./context/AuthContext";
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route element={<AppLayout />}>
-            <Route index element={<Index />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="builder" element={<Builder />} />
-            <Route path="marketplace" element={<Marketplace />} />
-            <Route path="learn" element={<Learn />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="backtest/:id" element={<Backtest />} />
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route index element={<Index />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="builder" element={<Builder />} />
+              <Route path="marketplace" element={<Marketplace />} />
+              <Route path="learn" element={<Learn />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="backtest/:id" element={<Backtest />} />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
