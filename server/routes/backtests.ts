@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../middleware/auth";
 import { Backtest } from "../models/Backtest";
 import EventEmitter from "events";
+import { getIO } from "../ws";
 
 export const backtestsRouter = Router();
 
@@ -15,7 +16,6 @@ function simulateRun(jobId: string) {
     const payload = { jobId, progress, status: progress >= 100 ? "completed" : "running" };
     bus.emit("progress:" + jobId, payload);
     try {
-      const { getIO } = await import("../ws.js");
       const io = getIO?.();
       if (io) io.to(jobId).emit("progress", payload);
     } catch {}
