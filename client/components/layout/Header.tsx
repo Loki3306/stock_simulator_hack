@@ -1,6 +1,8 @@
 import { Link, NavLink } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { LoginModal, SignupModal } from "@/components/auth/AuthModals";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard" },
@@ -11,12 +13,15 @@ const navItems = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [signupOpen, setSignupOpen] = useState(false);
+  const { user, logout } = useAuth();
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-black/70 glass">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="h-8 w-8 rounded-md btn-gradient glow-primary" />
+            <img src="/assets/logo/mark.svg" alt="Logo" className="h-8 w-8" />
             <span className="font-display text-lg font-semibold tracking-tight">AlgoTrader Pro</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 ml-8">
@@ -43,6 +48,18 @@ export default function Header() {
           >
             Start Building
           </Link>
+          {user ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground hidden sm:inline">{user.name}</span>
+              <button onClick={logout} className="text-sm text-muted-foreground hover:text-white">Logout</button>
+              <div className="h-9 w-9 rounded-full bg-card/60 border border-border/60 grid place-items-center"><User className="h-5 w-5" /></div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={() => setLoginOpen(true)} className="text-sm text-muted-foreground hover:text-white">Sign in</button>
+              <button onClick={() => setSignupOpen(true)} className="px-3 py-2 rounded-md border border-white/15 hover:bg-white/5">Sign up</button>
+            </div>
+          )}
         </div>
 
         <button
@@ -78,9 +95,17 @@ export default function Header() {
             >
               Start Building
             </Link>
+            {!user && (
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <button onClick={() => { setLoginOpen(true); setOpen(false); }} className="px-3 py-2 rounded-md bg-white/5">Sign in</button>
+                <button onClick={() => { setSignupOpen(true); setOpen(false); }} className="px-3 py-2 rounded-md btn-gradient text-black">Sign up</button>
+              </div>
+            )}
           </nav>
         </div>
       )}
+      <LoginModal open={loginOpen} onOpenChange={setLoginOpen} />
+      <SignupModal open={signupOpen} onOpenChange={setSignupOpen} />
     </header>
   );
 }
