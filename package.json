@@ -36,6 +36,10 @@
     "mongoose": "^8.7.0",
     "pino": "^9.5.0",
     "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "gsap": "^3.12.5",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -110,6 +114,7 @@
     "typescript": "^5.9.2",
     "vaul": "^1.1.2",
     "vite": "^7.1.2",
+    "@playwright/test": "^1.48.2",
     "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@10.14.0+sha512.ad27a79641b49c3e481a16a805baa71817a04bbe06a38d17e60e2eaee83f6a146c6a688125f5792e48dd5ba30e7da52a5cda4c3992b9ccf333f9ce223af84748"
