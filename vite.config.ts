@@ -23,15 +23,3 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
-
-function expressPlugin(): Plugin {
-  return {
-    name: "express-plugin",
-    apply: "serve", // Only apply during development (serve mode)
-    async configureServer(server) {
-      const mod = await import("./server/index.ts");
-      const app = mod.createServer();
-      server.middlewares.use(app);
-    },
-  };
-}
