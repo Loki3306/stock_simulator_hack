@@ -17,7 +17,9 @@ api.interceptors.request.use((config) => {
 
 let refreshing: Promise<string | null> | null = null;
 async function refresh() {
-  const res = await axios.post("/api/auth/refresh", {}, { withCredentials: true }).catch(() => null);
+  const res = await axios
+    .post("/api/auth/refresh", {}, { withCredentials: true })
+    .catch(() => null);
   return res?.data?.accessToken || null;
 }
 

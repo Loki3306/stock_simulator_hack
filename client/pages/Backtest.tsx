@@ -11,7 +11,7 @@ export default function Backtest() {
 
   useEffect(() => {
     let j = id as string;
-    if (!j || j === 'mock') {
+    if (!j || j === "mock") {
       const s = repo.listStrategies()[0];
       j = repo.enqueueBacktest(s.id);
     }
@@ -24,7 +24,10 @@ export default function Backtest() {
       const job = repo.getJob(jobId);
       if (!job) return;
       setProgress(job.progress);
-      if (job.status === 'completed' && job.result) { setResult(job.result); clearInterval(t); }
+      if (job.status === "completed" && job.result) {
+        setResult(job.result);
+        clearInterval(t);
+      }
     }, 500);
     return () => clearInterval(t);
   }, [jobId]);
@@ -36,7 +39,9 @@ export default function Backtest() {
     <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl">Backtest Results</h1>
-        <div className="text-sm text-muted-foreground">Progress: {progress}%</div>
+        <div className="text-sm text-muted-foreground">
+          Progress: {progress}%
+        </div>
       </div>
 
       {result ? (
@@ -56,7 +61,14 @@ export default function Backtest() {
             </div>
             <div className="rounded-xl border border-border/60 bg-card/60 p-5">
               <h2 className="font-display">Drawdown</h2>
-              <ChartComponent type="line" data={drawdown.map((d:any)=>({date:d.date, value:d.drawdown}))} height={240} />
+              <ChartComponent
+                type="line"
+                data={drawdown.map((d: any) => ({
+                  date: d.date,
+                  value: d.drawdown,
+                }))}
+                height={240}
+              />
             </div>
           </div>
 
@@ -74,14 +86,18 @@ export default function Backtest() {
                 </tr>
               </thead>
               <tbody>
-                {result.trades.map((t:any) => (
+                {result.trades.map((t: any) => (
                   <tr key={t.id} className="border-t border-border/60">
                     <td className="p-2">{t.id}</td>
                     <td className="p-2">{t.date}</td>
                     <td className="p-2">{t.action}</td>
                     <td className="p-2">{t.qty}</td>
                     <td className="p-2">{t.price}</td>
-                    <td className={`p-2 ${t.pnl>=0?'text-success':'text-destructive'}`}>{t.pnl.toFixed(2)}</td>
+                    <td
+                      className={`p-2 ${t.pnl >= 0 ? "text-success" : "text-destructive"}`}
+                    >
+                      {t.pnl.toFixed(2)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -90,9 +106,14 @@ export default function Backtest() {
         </>
       ) : (
         <div className="mt-10 rounded-xl border border-border/60 bg-card/60 p-8 text-center">
-          <div className="text-muted-foreground">Running backtest... {progress}%</div>
+          <div className="text-muted-foreground">
+            Running backtest... {progress}%
+          </div>
           <div className="mt-3 h-2 w-full bg-white/5 rounded">
-            <div className="h-2 rounded btn-gradient" style={{ width: `${progress}%` }} />
+            <div
+              className="h-2 rounded btn-gradient"
+              style={{ width: `${progress}%` }}
+            />
           </div>
         </div>
       )}

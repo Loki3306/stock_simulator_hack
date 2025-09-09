@@ -20,9 +20,15 @@ const BacktestSchema = new Schema<BacktestDoc>({
   from: { type: Date, required: true },
   to: { type: Date, required: true },
   settings: Schema.Types.Mixed,
-  status: { type: String, enum: ["queued", "running", "completed", "failed"], default: "queued", index: true },
+  status: {
+    type: String,
+    enum: ["queued", "running", "completed", "failed"],
+    default: "queued",
+    index: true,
+  },
   createdAt: { type: Date, default: Date.now },
   result: Schema.Types.Mixed,
 });
 
-export const Backtest = models.Backtest || model<BacktestDoc>("Backtest", BacktestSchema);
+export const Backtest =
+  models.Backtest || model<BacktestDoc>("Backtest", BacktestSchema);

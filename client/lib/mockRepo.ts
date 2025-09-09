@@ -63,9 +63,27 @@ export function seedOnce() {
   if (seeded.length) return;
   const ownerId = "mock";
   const baseNodes = [
-    { id: uid("n"), type: "indicator", blockType: "RSI", position: { x: 120, y: 80 }, parameters: { period: 14 } },
-    { id: uid("n"), type: "condition", blockType: "LessThan", position: { x: 320, y: 80 }, parameters: { threshold: 30 } },
-    { id: uid("n"), type: "action", blockType: "BUY", position: { x: 520, y: 80 }, parameters: {} },
+    {
+      id: uid("n"),
+      type: "indicator",
+      blockType: "RSI",
+      position: { x: 120, y: 80 },
+      parameters: { period: 14 },
+    },
+    {
+      id: uid("n"),
+      type: "condition",
+      blockType: "LessThan",
+      position: { x: 320, y: 80 },
+      parameters: { threshold: 30 },
+    },
+    {
+      id: uid("n"),
+      type: "action",
+      blockType: "BUY",
+      position: { x: 520, y: 80 },
+      parameters: {},
+    },
   ];
   const strategies: Strategy[] = [
     {
@@ -74,7 +92,10 @@ export function seedOnce() {
       title: "RSI Oversold",
       description: "Buy when RSI < 30",
       nodes: baseNodes,
-      edges: [ { from: baseNodes[0].id, to: baseNodes[1].id }, { from: baseNodes[1].id, to: baseNodes[2].id } ],
+      edges: [
+        { from: baseNodes[0].id, to: baseNodes[1].id },
+        { from: baseNodes[1].id, to: baseNodes[2].id },
+      ],
       version: 1,
       tags: ["rsi", "mean-reversion"],
       privacy: "private",
@@ -83,7 +104,16 @@ export function seedOnce() {
     },
   ];
   const marketplace: MarketplaceItem[] = [
-    { id: uid("m"), strategyId: strategies[0].id, title: "RSI Oversold", price: 0, rating: 4.6, tags: ["rsi"], isPublished: true, createdAt: Date.now() },
+    {
+      id: uid("m"),
+      strategyId: strategies[0].id,
+      title: "RSI Oversold",
+      price: 0,
+      rating: 4.6,
+      tags: ["rsi"],
+      isPublished: true,
+      createdAt: Date.now(),
+    },
   ];
   write(KEY.strategies, strategies);
   write(KEY.marketplace, marketplace);
@@ -93,21 +123,32 @@ export function seedOnce() {
 
 export const repo = {
   user() {
-    return read(KEY.user, { id: "mock", name: "mock", email: "mock@example.com" });
+    return read(KEY.user, {
+      id: "mock",
+      name: "mock",
+      email: "mock@example.com",
+    });
   },
   listStrategies(ownerId?: ID) {
     const all = read(KEY.strategies, [] as Strategy[]);
     return ownerId ? all.filter((s) => s.ownerId === ownerId) : all;
   },
   getStrategy(id: ID) {
-    return read(KEY.strategies, [] as Strategy[]).find((s) => s.id === id) || null;
+    return (
+      read(KEY.strategies, [] as Strategy[]).find((s) => s.id === id) || null
+    );
   },
   saveStrategy(partial: Partial<Strategy> & { title: string }) {
     const all = read(KEY.strategies, [] as Strategy[]);
     if (partial.id) {
       const idx = all.findIndex((s) => s.id === partial.id);
       if (idx >= 0) {
-        all[idx] = { ...all[idx], ...partial, updatedAt: Date.now(), version: (all[idx].version || 1) + 1 } as Strategy;
+        all[idx] = {
+          ...all[idx],
+          ...partial,
+          updatedAt: Date.now(),
+          version: (all[idx].version || 1) + 1,
+        } as Strategy;
       }
     } else {
       const n: Strategy = {
@@ -130,22 +171,39 @@ export const repo = {
     return partial.id as ID;
   },
   deleteStrategy(id: ID) {
-    const all = read(KEY.strategies, [] as Strategy[]).filter((s) => s.id !== id);
+    const all = read(KEY.strategies, [] as Strategy[]).filter(
+      (s) => s.id !== id,
+    );
     write(KEY.strategies, all);
   },
   marketplace() {
     return read(KEY.marketplace, [] as MarketplaceItem[]);
   },
-  publish(strategyId: ID, data: { title?: string; price?: number; tags?: string[] }) {
+  publish(
+    strategyId: ID,
+    data: { title?: string; price?: number; tags?: string[] },
+  ) {
     const list = read(KEY.marketplace, [] as MarketplaceItem[]);
     const existing = list.find((m) => m.strategyId === strategyId);
-    const item: MarketplaceItem = existing || { id: uid("m"), strategyId, title: "", price: 0, rating: 4.5, tags: [], isPublished: true, createdAt: Date.now() };
+    const item: MarketplaceItem = existing || {
+      id: uid("m"),
+      strategyId,
+      title: "",
+      price: 0,
+      rating: 4.5,
+      tags: [],
+      isPublished: true,
+      createdAt: Date.now(),
+    };
     Object.assign(item, { ...data, isPublished: true });
     if (!existing) list.push(item);
     write(KEY.marketplace, list);
     const strategies = read(KEY.strategies, [] as Strategy[]);
     const s = strategies.find((x) => x.id === strategyId);
-    if (s) { s.privacy = "marketplace"; write(KEY.strategies, strategies); }
+    if (s) {
+      s.privacy = "marketplace";
+      write(KEY.strategies, strategies);
+    }
     return item;
   },
   importMarket(itemId: ID) {
@@ -154,28 +212,62 @@ export const repo = {
     if (!item) return null;
     const source = this.getStrategy(item.strategyId);
     if (!source) return null;
-    const id = this.saveStrategy({ title: `${source.title} (Imported)`, nodes: source.nodes, edges: source.edges, tags: source.tags, privacy: "private" });
+    const id = this.saveStrategy({
+      title: `${source.title} (Imported)`,
+      nodes: source.nodes,
+      edges: source.edges,
+      tags: source.tags,
+      privacy: "private",
+    });
     return this.getStrategy(id);
   },
   enqueueBacktest(strategyId: ID) {
     const jobs = read(KEY.backtests, [] as BacktestJob[]);
     const id = uid("job");
-    const job: BacktestJob = { id, strategyId, status: "queued", progress: 0, createdAt: Date.now() };
+    const job: BacktestJob = {
+      id,
+      strategyId,
+      status: "queued",
+      progress: 0,
+      createdAt: Date.now(),
+    };
     jobs.push(job);
     write(KEY.backtests, jobs);
     const timer = setInterval(() => {
       const js = read(KEY.backtests, [] as BacktestJob[]);
       const j = js.find((x) => x.id === id)!;
       if (!j) return clearInterval(timer);
-      if (j.progress >= 100) { clearInterval(timer); return; }
+      if (j.progress >= 100) {
+        clearInterval(timer);
+        return;
+      }
       j.progress = Math.min(100, j.progress + Math.ceil(Math.random() * 15));
       j.status = j.progress >= 100 ? "completed" : "running";
       if (j.status === "completed") {
         j.result = {
-          kpis: { totalReturn: 23.4, annualReturn: 12.3, sharpe: 1.45, maxDrawdown: -8.7, winRate: 62 },
-          equityCurve: Array.from({ length: 120 }, (_, i) => ({ date: `${i}`, value: 10000 + i * 45 + Math.random()*200 })),
-          drawdownCurve: Array.from({ length: 120 }, (_, i) => ({ date: `${i}`, drawdown: -Math.random()*10 })),
-          trades: Array.from({ length: 60 }, (_, i) => ({ id: i+1, date: `${i}`, action: i%2?"BUY":"SELL", qty: 10, price: 100+i, pnl: (Math.random()-0.5)*100 })),
+          kpis: {
+            totalReturn: 23.4,
+            annualReturn: 12.3,
+            sharpe: 1.45,
+            maxDrawdown: -8.7,
+            winRate: 62,
+          },
+          equityCurve: Array.from({ length: 120 }, (_, i) => ({
+            date: `${i}`,
+            value: 10000 + i * 45 + Math.random() * 200,
+          })),
+          drawdownCurve: Array.from({ length: 120 }, (_, i) => ({
+            date: `${i}`,
+            drawdown: -Math.random() * 10,
+          })),
+          trades: Array.from({ length: 60 }, (_, i) => ({
+            id: i + 1,
+            date: `${i}`,
+            action: i % 2 ? "BUY" : "SELL",
+            qty: 10,
+            price: 100 + i,
+            pnl: (Math.random() - 0.5) * 100,
+          })),
         };
       }
       write(KEY.backtests, js);
@@ -183,7 +275,9 @@ export const repo = {
     return id;
   },
   getJob(id: ID) {
-    return read(KEY.backtests, [] as BacktestJob[]).find((j) => j.id === id) || null;
+    return (
+      read(KEY.backtests, [] as BacktestJob[]).find((j) => j.id === id) || null
+    );
   },
 };
 

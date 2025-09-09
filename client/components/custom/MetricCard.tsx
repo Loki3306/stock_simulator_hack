@@ -13,7 +13,11 @@ export interface MetricCardProps {
 function formatValue(val: number, fmt: MetricCardProps["format"]) {
   switch (fmt) {
     case "currency":
-      return val.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+      return val.toLocaleString(undefined, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 2,
+      });
     case "percentage":
       return `${val.toFixed(1)}%`;
     default:
@@ -21,7 +25,14 @@ function formatValue(val: number, fmt: MetricCardProps["format"]) {
   }
 }
 
-export default function MetricCard({ title, value, change, format, trend = "neutral", className }: MetricCardProps) {
+export default function MetricCard({
+  title,
+  value,
+  change,
+  format,
+  trend = "neutral",
+  className,
+}: MetricCardProps) {
   const [display, setDisplay] = useState(0);
   const startRef = useRef<number | null>(null);
   const fromRef = useRef(0);
@@ -43,11 +54,23 @@ export default function MetricCard({ title, value, change, format, trend = "neut
     return () => cancelAnimationFrame(id);
   }, [value]);
 
-  const changeColor = change == null ? "text-muted-foreground" : change >= 0 ? "text-success" : "text-destructive";
+  const changeColor =
+    change == null
+      ? "text-muted-foreground"
+      : change >= 0
+        ? "text-success"
+        : "text-destructive";
 
   return (
-    <div className={cn("relative rounded-xl border border-border/60 bg-card/60 bg-card-gradient p-4 shadow-sm hover:shadow-md transition", className)}>
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{title}</div>
+    <div
+      className={cn(
+        "relative rounded-xl border border-border/60 bg-card/60 bg-card-gradient p-4 shadow-sm hover:shadow-md transition",
+        className,
+      )}
+    >
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">
+        {title}
+      </div>
       <div className="mt-2 flex items-end justify-between">
         <div className="font-display text-2xl font-semibold">
           {formatValue(display, format)}
@@ -61,7 +84,14 @@ export default function MetricCard({ title, value, change, format, trend = "neut
       </div>
       <div className="absolute inset-0 rounded-xl pointer-events-none ring-1 ring-white/5" />
       {trend !== "neutral" && (
-        <div className={cn("absolute -inset-px rounded-xl", trend === "up" ? "shadow-[0_0_24px_rgba(0,214,122,0.25)]" : "shadow-[0_0_24px_rgba(255,60,60,0.2)]")} />
+        <div
+          className={cn(
+            "absolute -inset-px rounded-xl",
+            trend === "up"
+              ? "shadow-[0_0_24px_rgba(0,214,122,0.25)]"
+              : "shadow-[0_0_24px_rgba(255,60,60,0.2)]",
+          )}
+        />
       )}
     </div>
   );

@@ -25,4 +25,6 @@ const MarketplaceItemSchema = new Schema<MarketplaceItemDoc>({
   isPublished: { type: Boolean, default: false, index: true },
 });
 
-export const MarketplaceItem = models.MarketplaceItem || model<MarketplaceItemDoc>("MarketplaceItem", MarketplaceItemSchema);
+export const MarketplaceItem =
+  models.MarketplaceItem ||
+  model<MarketplaceItemDoc>("MarketplaceItem", MarketplaceItemSchema);

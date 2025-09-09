@@ -26,9 +26,13 @@ function signAccessToken(user: { id: string; role: string }) {
 }
 
 function signRefreshToken(user: { id: string; role: string }) {
-  return jwt.sign(user, process.env.JWT_REFRESH_SECRET || "dev_refresh_secret", {
-    expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "7d",
-  });
+  return jwt.sign(
+    user,
+    process.env.JWT_REFRESH_SECRET || "dev_refresh_secret",
+    {
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "7d",
+    },
+  );
 }
 
 function setRefreshCookie(res: any, token: string) {
@@ -46,7 +50,8 @@ authRouter.use(cookieParser());
 
 authRouter.post("/register", async (req, res) => {
   const parsed = registerSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.flatten() });
   const { email, password, name } = parsed.data;
   const existing = await User.findOne({ email });
   if (existing) return res.status(400).json({ error: "Email already in use" });
@@ -54,15 +59,29 @@ authRouter.post("/register", async (req, res) => {
   const user = await User.create({ email, passwordHash, name });
   const access = signAccessToken({ id: String(user._id), role: user.role });
   const refresh = signRefreshToken({ id: String(user._id), role: user.role });
-  user.refreshTokens.push({ token: refresh, createdAt: new Date(), ip: req.ip });
+  user.refreshTokens.push({
+    token: refresh,
+    createdAt: new Date(),
+    ip: req.ip,
+  });
   await user.save();
   setRefreshCookie(res, refresh);
-  res.json({ accessToken: access, user: { id: user._id, email: user.email, name: user.name, role: user.role, settings: user.settings } });
+  res.json({
+    accessToken: access,
+    user: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      settings: user.settings,
+    },
+  });
 });
 
 authRouter.post("/login", async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+  if (!parsed.success)
+    return res.status(400).json({ error: parsed.error.flatten() });
   const { email, password } = parsed.data;
   const user = await User.findOne({ email });
   if (!user) return res.status(401).json({ error: "Invalid credentials" });
@@ -70,23 +89,43 @@ authRouter.post("/login", async (req, res) => {
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });
   const access = signAccessToken({ id: String(user._id), role: user.role });
   const refresh = signRefreshToken({ id: String(user._id), role: user.role });
-  user.refreshTokens.push({ token: refresh, createdAt: new Date(), ip: req.ip });
+  user.refreshTokens.push({
+    token: refresh,
+    createdAt: new Date(),
+    ip: req.ip,
+  });
   await user.save();
   setRefreshCookie(res, refresh);
-  res.json({ accessToken: access, user: { id: user._id, email: user.email, name: user.name, role: user.role, settings: user.settings } });
+  res.json({
+    accessToken: access,
+    user: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      settings: user.settings,
+    },
+  });
 });
 
 authRouter.post("/refresh", async (req, res) => {
   const token = req.cookies?.["refresh_token"];
   if (!token) return res.status(401).json({ error: "Missing refresh token" });
   try {
-    const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET || "dev_refresh_secret") as any;
+    const payload = jwt.verify(
+      token,
+      process.env.JWT_REFRESH_SECRET || "dev_refresh_secret",
+    ) as any;
     const user = await User.findById(payload.id);
     if (!user) return res.status(401).json({ error: "Invalid refresh token" });
     const exists = user.refreshTokens.find((t) => t.token === token);
-    if (!exists) return res.status(401).json({ error: "Refresh token revoked" });
+    if (!exists)
+      return res.status(401).json({ error: "Refresh token revoked" });
     // rotate
-    const newRefresh = signRefreshToken({ id: String(user._id), role: user.role });
+    const newRefresh = signRefreshToken({
+      id: String(user._id),
+      role: user.role,
+    });
     exists.token = newRefresh;
     exists.createdAt = new Date();
     await user.save();
@@ -112,5 +151,11 @@ authRouter.post("/logout", authenticate, async (req: any, res) => {
 authRouter.get("/user", authenticate, async (req: any, res) => {
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ error: "Not found" });
-  res.json({ id: user._id, email: user.email, name: user.name, role: user.role, settings: user.settings });
+  res.json({
+    id: user._id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    settings: user.settings,
+  });
 });

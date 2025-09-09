@@ -24,9 +24,14 @@ const StrategySchema = new Schema<StrategyDoc>({
   tags: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-  privacy: { type: String, enum: ["private", "public", "marketplace"], default: "private" },
+  privacy: {
+    type: String,
+    enum: ["private", "public", "marketplace"],
+    default: "private",
+  },
 });
 
 StrategySchema.index({ title: "text", tags: 1 });
 
-export const Strategy = models.Strategy || model<StrategyDoc>("Strategy", StrategySchema);
+export const Strategy =
+  models.Strategy || model<StrategyDoc>("Strategy", StrategySchema);

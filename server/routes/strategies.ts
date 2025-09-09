@@ -16,23 +16,42 @@ strategiesRouter.get("/", authenticate as any, async (req: any, res) => {
 
 strategiesRouter.post("/", authenticate as any, async (req: any, res) => {
   const { title, description, nodes, edges, tags, privacy } = req.body;
-  const s = await Strategy.create({ ownerId: req.user.id, title, description, nodes, edges, tags, privacy });
+  const s = await Strategy.create({
+    ownerId: req.user.id,
+    title,
+    description,
+    nodes,
+    edges,
+    tags,
+    privacy,
+  });
   res.status(201).json(s);
 });
 
 strategiesRouter.get("/:id", authenticate as any, async (req: any, res) => {
   const s = await Strategy.findById(req.params.id);
   if (!s) return res.status(404).json({ error: "Not found" });
-  if (String(s.ownerId) !== req.user.id && s.privacy === "private") return res.status(403).json({ error: "Forbidden" });
+  if (String(s.ownerId) !== req.user.id && s.privacy === "private")
+    return res.status(403).json({ error: "Forbidden" });
   res.json(s);
 });
 
 strategiesRouter.put("/:id", authenticate as any, async (req: any, res) => {
   const s = await Strategy.findById(req.params.id);
   if (!s) return res.status(404).json({ error: "Not found" });
-  if (String(s.ownerId) !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+  if (String(s.ownerId) !== req.user.id)
+    return res.status(403).json({ error: "Forbidden" });
   const { title, description, nodes, edges, tags, privacy } = req.body;
-  s.set({ title, description, nodes, edges, tags, privacy, updatedAt: new Date(), version: (s.version || 1) + 1 });
+  s.set({
+    title,
+    description,
+    nodes,
+    edges,
+    tags,
+    privacy,
+    updatedAt: new Date(),
+    version: (s.version || 1) + 1,
+  });
   await s.save();
   res.json(s);
 });
@@ -40,7 +59,8 @@ strategiesRouter.put("/:id", authenticate as any, async (req: any, res) => {
 strategiesRouter.delete("/:id", authenticate as any, async (req: any, res) => {
   const s = await Strategy.findById(req.params.id);
   if (!s) return res.status(404).json({ error: "Not found" });
-  if (String(s.ownerId) !== req.user.id) return res.status(403).json({ error: "Forbidden" });
+  if (String(s.ownerId) !== req.user.id)
+    return res.status(403).json({ error: "Forbidden" });
   await s.deleteOne();
   res.json({ success: true });
 });

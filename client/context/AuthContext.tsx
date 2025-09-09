@@ -1,7 +1,13 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api, { setAccessToken } from "@/lib/api";
 
-interface User { id: string; email: string; name: string; role: string; settings?: any }
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  settings?: any;
+}
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -33,29 +39,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
     } catch {
       setAccessToken("mock-token");
-      setUser({ id: "mock", email, name: email.split("@")[0], role: "user", settings: { reduceMotion: false, theme: "dark" } });
+      setUser({
+        id: "mock",
+        email,
+        name: email.split("@")[0],
+        role: "user",
+        settings: { reduceMotion: false, theme: "dark" },
+      });
     }
   }
 
   async function register(name: string, email: string, password: string) {
     try {
-      const { data } = await api.post("/auth/register", { name, email, password });
+      const { data } = await api.post("/auth/register", {
+        name,
+        email,
+        password,
+      });
       setAccessToken(data.accessToken);
       setUser(data.user);
     } catch {
       setAccessToken("mock-token");
-      setUser({ id: "mock", email, name, role: "user", settings: { reduceMotion: false, theme: "dark" } });
+      setUser({
+        id: "mock",
+        email,
+        name,
+        role: "user",
+        settings: { reduceMotion: false, theme: "dark" },
+      });
     }
   }
 
   async function logout() {
-    try { await api.post("/auth/logout"); } catch {}
+    try {
+      await api.post("/auth/logout");
+    } catch {}
     setAccessToken(null);
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

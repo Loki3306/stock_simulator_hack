@@ -6,7 +6,9 @@ import { Server as SocketIOServer } from "socket.io";
 
 const app = createApp();
 const server = http.createServer(app as any);
-const io = new SocketIOServer(server, { cors: { origin: process.env.ALLOWED_ORIGIN || "*" } });
+const io = new SocketIOServer(server, {
+  cors: { origin: process.env.ALLOWED_ORIGIN || "*" },
+});
 import { setIO } from "./ws";
 setIO(io);
 
