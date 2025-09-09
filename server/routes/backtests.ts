@@ -12,7 +12,13 @@ function simulateRun(jobId: string) {
   const tick = () => {
     progress += Math.ceil(Math.random() * 12);
     if (progress > 100) progress = 100;
-    bus.emit("progress:" + jobId, { jobId, progress, status: progress >= 100 ? "completed" : "running" });
+    const payload = { jobId, progress, status: progress >= 100 ? "completed" : "running" };
+    bus.emit("progress:" + jobId, payload);
+    try {
+      const { getIO } = await import("../ws.js");
+      const io = getIO?.();
+      if (io) io.to(jobId).emit("progress", payload);
+    } catch {}
     if (progress < 100) setTimeout(tick, 500);
   };
   setTimeout(tick, 300);
