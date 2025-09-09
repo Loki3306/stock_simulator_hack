@@ -1,4 +1,4 @@
-import { Schema, model, models, Types } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
 
 export interface MarketplaceItemDoc {
   _id: Types.ObjectId;
@@ -26,5 +26,5 @@ const MarketplaceItemSchema = new Schema<MarketplaceItemDoc>({
 });
 
 export const MarketplaceItem =
-  models.MarketplaceItem ||
-  model<MarketplaceItemDoc>("MarketplaceItem", MarketplaceItemSchema);
+  mongoose.models.MarketplaceItem ||
+  mongoose.model<MarketplaceItemDoc>("MarketplaceItem", MarketplaceItemSchema);

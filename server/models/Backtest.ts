@@ -1,4 +1,4 @@
-import { Schema, model, models, Types } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
 
 export interface BacktestDoc {
   _id: Types.ObjectId;
@@ -31,4 +31,4 @@ const BacktestSchema = new Schema<BacktestDoc>({
 });
 
 export const Backtest =
-  models.Backtest || model<BacktestDoc>("Backtest", BacktestSchema);
+  mongoose.models.Backtest || mongoose.model<BacktestDoc>("Backtest", BacktestSchema);
