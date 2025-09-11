@@ -22,17 +22,6 @@ const NodeEditor: React.FC<NodeEditorProps> = ({ isOpen, onClose, nodes, onNodes
   
   const selectedNode = nodes.find(node => node.id === selectedNodeId);
   
-  // Debug logging
-  React.useEffect(() => {
-    console.log('NodeEditor state:', {
-      isOpen,
-      selectedNodeId,
-      nodesCount: nodes.length,
-      selectedNode: selectedNode ? { id: selectedNode.id, type: selectedNode.type } : null,
-      allNodeIds: nodes.map(n => n.id)
-    });
-  }, [isOpen, selectedNodeId, nodes, selectedNode]);
-  
   const updateNodeData = (updates: Record<string, any>) => {
     if (!selectedNode) return;
     
@@ -524,7 +513,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({ isOpen, onClose, nodes, onNodes
   if (!isOpen) return null;
   
   return (
-    <Card className="w-80 h-full bg-gray-900 border-gray-700 flex flex-col">
+    <Card className="w-80 h-full bg-gray-900 border-gray-700 flex flex-col strategy-scrollbar">
       <CardHeader className="flex-shrink-0 pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg text-white flex items-center space-x-2">
@@ -552,7 +541,7 @@ const NodeEditor: React.FC<NodeEditorProps> = ({ isOpen, onClose, nodes, onNodes
         )}
       </CardHeader>
       
-      <CardContent className="flex-1 overflow-y-auto">
+      <CardContent className="flex-1 overflow-y-auto strategy-scrollbar">
         {renderNodeEditor()}
       </CardContent>
       

@@ -50,7 +50,7 @@ const StrategyMetrics: React.FC<StrategyMetricsProps> = ({ isOpen }) => {
   if (!isOpen) return null;
   
   return (
-    <div className="h-48 bg-gray-900 border-r border-gray-700 overflow-y-auto">
+    <div className="h-48 bg-gray-900 border-r border-gray-700 overflow-y-auto strategy-scrollbar">
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white flex items-center space-x-2">

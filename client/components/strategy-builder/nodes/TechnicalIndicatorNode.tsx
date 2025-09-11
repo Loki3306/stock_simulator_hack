@@ -32,7 +32,7 @@ const TechnicalIndicatorNode: React.FC<NodeProps> = (props) => {
       {...props}
       title="Technical Indicator"
       icon={<BarChart3 size={16} />}
-      color="bg-purple-500"
+      color="bg-red-500"
       inputs={[{ id: 'instrument', label: 'Instrument' }]}
       outputs={[{ id: 'signal', label: 'Entry Signal' }]}
     >

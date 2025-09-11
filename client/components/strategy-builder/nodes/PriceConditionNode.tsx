@@ -20,7 +20,7 @@ const PriceConditionNode: React.FC<NodeProps> = (props) => {
       {...props}
       title="Price Condition"
       icon={<Activity size={16} />}
-      color="bg-purple-500"
+      color="bg-green-500"
       inputs={[{ id: 'instrument', label: 'Instrument' }]}
       outputs={[{ id: 'signal', label: 'Entry Signal' }]}
     >

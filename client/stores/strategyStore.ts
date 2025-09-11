@@ -45,12 +45,17 @@ interface StrategyStore {
   validateStrategy: (nodes: Node[], edges: Edge[]) => ValidationError[];
   exportStrategy: (nodes: Node[], edges: Edge[]) => StrategyData;
   importStrategy: (strategy: StrategyData) => void;
-  undo: () => void;
-  redo: () => void;
+  undo: () => StrategyData | null;
+  redo: () => StrategyData | null;
   resetStrategy: () => void;
   
   // UI actions
   setSelectedNodeId: (nodeId: string | null) => void;
+  
+  // History actions
+  saveToHistory: (nodes: Node[], edges: Edge[]) => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 }
 
 const createEmptyStrategy = (): StrategyData => ({
@@ -258,7 +263,9 @@ export const useStrategyStore = create<StrategyStore>((set, get) => ({
         historyIndex: historyIndex - 1,
         validationErrors: get().validateStrategy(previousStrategy.nodes, previousStrategy.edges),
       });
+      return previousStrategy;
     }
+    return null;
   },
   
   redo: () => {
@@ -270,7 +277,9 @@ export const useStrategyStore = create<StrategyStore>((set, get) => ({
         historyIndex: historyIndex + 1,
         validationErrors: get().validateStrategy(nextStrategy.nodes, nextStrategy.edges),
       });
+      return nextStrategy;
     }
+    return null;
   },
   
   resetStrategy: () => {
@@ -286,5 +295,36 @@ export const useStrategyStore = create<StrategyStore>((set, get) => ({
   
   setSelectedNodeId: (nodeId: string | null) => {
     set({ selectedNodeId: nodeId });
+  },
+  
+  saveToHistory: (nodes: Node[], edges: Edge[]) => {
+    const currentStrategy = get().strategyData;
+    const updatedStrategy: StrategyData = {
+      ...currentStrategy,
+      nodes,
+      edges,
+      metadata: {
+        ...currentStrategy.metadata,
+        lastModified: new Date().toISOString(),
+      },
+    };
+    
+    const history = get().history.slice(0, get().historyIndex + 1);
+    history.push(updatedStrategy);
+    
+    set({
+      strategyData: updatedStrategy,
+      history,
+      historyIndex: history.length - 1,
+    });
+  },
+  
+  canUndo: () => {
+    return get().historyIndex > 0;
+  },
+  
+  canRedo: () => {
+    const { history, historyIndex } = get();
+    return historyIndex < history.length - 1;
   },
 }));

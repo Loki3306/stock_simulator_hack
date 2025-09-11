@@ -5,6 +5,90 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Dark Scrollbar Theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f2937; /* gray-800 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b5563; /* gray-600 */
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280; /* gray-500 */
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #8b5cf6; /* purple-500 */
+}
+
+::-webkit-scrollbar-corner {
+  background: #1f2937; /* gray-800 */
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+/* Custom scrollbar for strategy builder panels */
+.strategy-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.strategy-scrollbar::-webkit-scrollbar-track {
+  background: #111827; /* gray-900 */
+}
+
+/* React Flow Minimap Styles */
+.react-flow__minimap {
+  background: #0F172A !important;
+  border: 2px solid #3B82F6 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.minimap-container {
+  pointer-events: all !important;
+  z-index: 1000 !important;
+}
+
+.minimap-container .react-flow__minimap {
+  pointer-events: all !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Ensure minimap nodes are visible */
+.react-flow__minimap .react-flow__minimap-node {
+  fill: #3B82F6 !important;
+  stroke: #ffffff !important;
+  stroke-width: 2px !important;
+  opacity: 0.8 !important;
+}
+
+.react-flow__minimap .react-flow__minimap-mask {
+  fill: rgba(0, 0, 0, 0.4) !important;
+}
+
+.strategy-scrollbar::-webkit-scrollbar-thumb {
+  background: #374151; /* gray-700 */
+  border-radius: 3px;
+}
+
+.strategy-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #4b5563; /* gray-600 */
+}
+
 @layer base {
   /**
    * Tailwind CSS theme
@@ -188,4 +272,81 @@
     transition-duration: 0s !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Custom Minimap Styling */
+.minimap-container {
+  transition: box-shadow 0.2s ease;
+}
+
+.minimap-container:hover {
+  filter: brightness(1.1);
+}
+
+.minimap-container:active {
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+/* Enhanced Node Styling */
+.react-flow__node {
+  border-radius: 8px;
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: all 0.2s ease;
+  background: #374151 !important; /* Override default background */
+}
+
+.react-flow__node.selected {
+  box-shadow: 0 0 0 2px #8B5CF6, 0 0 8px rgba(139, 92, 246, 0.4);
+  transform: scale(1.02);
+}
+
+.react-flow__node:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Node Type Specific Styling with more prominent colors */
+.react-flow__node[data-type="stock"] {
+  border: 2px solid #3B82F6 !important;
+  background: linear-gradient(135deg, #3B82F6, #1E40AF) !important;
+}
+
+.react-flow__node[data-type="optionLeg"] {
+  border: 2px solid #F59E0B !important;
+  background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+}
+
+.react-flow__node[data-type="technicalIndicator"] {
+  border: 2px solid #10B981 !important;
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+}
+
+.react-flow__node[data-type="priceCondition"] {
+  border: 2px solid #EF4444 !important;
+  background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+}
+
+.react-flow__node[data-type="profitTarget"] {
+  border: 2px solid #22C55E !important;
+  background: linear-gradient(135deg, #22C55E, #16A34A) !important;
+}
+
+.react-flow__node[data-type="stopLoss"] {
+  border: 2px solid #DC2626 !important;
+  background: linear-gradient(135deg, #DC2626, #B91C1C) !important;
+}
+
+.react-flow__node[data-type="positionSizing"] {
+  border: 2px solid #A855F7 !important;
+  background: linear-gradient(135deg, #A855F7, #9333EA) !important;
+}
+
+.react-flow__node[data-type="orderType"] {
+  border: 2px solid #FB923C !important;
+  background: linear-gradient(135deg, #FB923C, #EA580C) !important;
+}
+
+.react-flow__node[data-type="payoffChart"] {
+  border: 2px solid #06B6D4 !important;
+  background: linear-gradient(135deg, #06B6D4, #0891B2) !important;
 }

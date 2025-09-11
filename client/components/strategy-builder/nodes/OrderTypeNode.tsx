@@ -41,7 +41,7 @@ const OrderTypeNode: React.FC<NodeProps> = (props) => {
       {...props}
       title="Order Type"
       icon={<Building2 size={16} />}
-      color="bg-purple-500"
+      color="bg-orange-500"
       inputs={[{ id: 'position', label: 'Position' }]}
       outputs={[{ id: 'order', label: 'Order' }]}
     >
