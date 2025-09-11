@@ -23,7 +23,9 @@ export default function Particles({ density = 60 }: { density?: number }) {
     const onResize = () => resize();
     window.addEventListener("resize", onResize);
 
-    const count = Math.floor((c.width / DPR) * (c.height / DPR) / (12000 / (density / 60)));
+    const count = Math.floor(
+      ((c.width / DPR) * (c.height / DPR)) / (12000 / (density / 60)),
+    );
     const pts = Array.from({ length: count }, () => ({
       x: Math.random() * (c.width / DPR),
       y: Math.random() * (c.height / DPR),
@@ -49,8 +51,10 @@ export default function Particles({ density = 60 }: { density?: number }) {
       // lines
       for (let i = 0; i < pts.length; i++) {
         for (let j = i + 1; j < pts.length; j++) {
-          const a = pts[i], b = pts[j];
-          const dx = a.x - b.x, dy = a.y - b.y;
+          const a = pts[i],
+            b = pts[j];
+          const dx = a.x - b.x,
+            dy = a.y - b.y;
           const d = Math.hypot(dx, dy);
           if (d < 90) {
             ctx.strokeStyle = `rgba(255,170,34,${0.18 * (1 - d / 90)})`;
@@ -66,8 +70,18 @@ export default function Particles({ density = 60 }: { density?: number }) {
       raf = requestAnimationFrame(step);
     }
     raf = requestAnimationFrame(step);
-    return () => { stopped = true; cancelAnimationFrame(raf); window.removeEventListener("resize", onResize); };
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
 
-  return <canvas ref={ref} className="absolute inset-0 w-full h-full opacity-60" aria-hidden />;
+  return (
+    <canvas
+      ref={ref}
+      className="absolute inset-0 w-full h-full opacity-60"
+      aria-hidden
+    />
+  );
 }

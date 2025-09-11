@@ -6,7 +6,9 @@ export default function Index() {
     <div className="bg-hero-gradient">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0"><Particles /></div>
+        <div className="absolute inset-0">
+          <Particles />
+        </div>
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 md:py-32">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -44,7 +46,10 @@ export default function Index() {
                 { k: "Strategies", v: "5k+" },
                 { k: "Avg. Return", v: "+12.3%" },
               ].map((s) => (
-                <div key={s.k} className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
+                <div
+                  key={s.k}
+                  className="rounded-lg border border-white/10 bg-white/5 p-3 text-center"
+                >
                   <div className="text-xs text-muted-foreground">{s.k}</div>
                   <div className="font-display text-xl">{s.v}</div>
                 </div>
@@ -129,7 +134,10 @@ export default function Index() {
       </section>
 
       {/* Showcase */}
-      <section id="demo" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16">
+      <section
+        id="demo"
+        className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16"
+      >
         <div className="grid gap-6 md:grid-cols-2 items-center">
           <div className="rounded-xl border border-white/10 bg-white/5 aspect-video grid place-items-center text-muted-foreground">
             Demo video placeholder
