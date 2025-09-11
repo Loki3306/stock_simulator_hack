@@ -259,6 +259,7 @@
       0 0 2rem hsla(var(--primary), 0.25);
   }
   .glass {
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
     backdrop-filter: saturate(140%) blur(12px);
     background: linear-gradient(
       180deg,

@@ -709,9 +709,9 @@ function PublishButton() {
           Publish
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col bg-black/80 glass border border-border/30">
+        <DialogHeader className="flex-shrink-0 pb-4">
+          <DialogTitle className="text-lg font-semibold">
             Publish {type === "blog" ? "Blog" : type === "course" ? "Course" : "Video"}
           </DialogTitle>
         </DialogHeader>
