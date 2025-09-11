@@ -10,7 +10,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
-import Builder from "./pages/Builder";
+import ProfessionalStrategyBuilder from "./pages/ProfessionalStrategyBuilder";
 import Marketplace from "./pages/Marketplace";
 import Learn from "./pages/Learn";
 import Settings from "./pages/Settings";
@@ -31,7 +31,7 @@ const App = () => (
             <Route element={<AppLayout />}>
               <Route index element={<Index />} />
               <Route path="dashboard" element={<Dashboard />} />
-              <Route path="builder" element={<Builder />} />
+              <Route path="builder" element={<ProfessionalStrategyBuilder />} />
               <Route path="marketplace" element={<Marketplace />} />
               <Route path="learn" element={<Learn />} />
               <Route path="settings" element={<Settings />} />

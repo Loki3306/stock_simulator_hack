@@ -31,4 +31,4 @@ const BacktestSchema = new Schema<BacktestDoc>({
   result: Schema.Types.Mixed,
 });
 
-export const Backtest = (mongoose as any).models?.Backtest || mongoose.model<BacktestDoc>("Backtest", BacktestSchema);
+export const Backtest = (mongoose.models?.Backtest as mongoose.Model<BacktestDoc>) || mongoose.model<BacktestDoc>("Backtest", BacktestSchema);

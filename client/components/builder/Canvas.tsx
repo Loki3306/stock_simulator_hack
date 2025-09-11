@@ -10,10 +10,24 @@ export default function Canvas({
   nodes,
   edges,
   onUpdate,
+  onDropFromPalette,
+  onSelectNode,
+  onNodeContext,
+  onSelectEdge,
+  selectedEdgeIdx,
+  multiSelect = [],
+  onMultiMove,
 }: {
   nodes: NodeData[];
   edges: Edge[];
   onUpdate: (n: NodeData[], e: Edge[]) => void;
+  onDropFromPalette?: (data: any, pos: { x: number; y: number }) => void;
+  onSelectNode?: (id: string | null) => void;
+  onNodeContext?: (e: { x: number; y: number; id: string }) => void;
+  onSelectEdge?: (idx: number | null) => void;
+  selectedEdgeIdx?: number | null;
+  multiSelect?: string[];
+  onMultiMove?: (dx: number, dy: number) => void;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
@@ -30,6 +44,7 @@ export default function Canvas({
   const onMouseDownBG = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).dataset.role === "bg") {
       setSelected(null);
+      onSelectNode?.(null);
     }
   };
 
@@ -45,11 +60,26 @@ export default function Canvas({
   const onMouseMove = (e: React.MouseEvent) => {
     if (dragging.current) {
       const { id, dx, dy } = dragging.current;
-      const next = nodes.map((n) =>
-        n.id === id
-          ? { ...n, position: { x: e.clientX - dx, y: e.clientY - dy } }
-          : n,
-      );
+      const nx = e.clientX - dx;
+      const ny = e.clientY - dy;
+      // snap to 8px grid
+      const sx = Math.round(nx / 8) * 8;
+      const sy = Math.round(ny / 8) * 8;
+      let next = nodes;
+      if (multiSelect && multiSelect.length > 1 && multiSelect.includes(id)) {
+        // move all selected nodes by delta from original dragged node
+        next = nodes.map((n) => {
+          if (multiSelect.includes(n.id)) {
+            const orig = nodes.find((o) => o.id === id)!;
+            const odx = n.position.x - orig.position.x;
+            const ody = n.position.y - orig.position.y;
+            return { ...n, position: { x: sx + odx, y: sy + ody } };
+          }
+          return n;
+        });
+      } else {
+        next = nodes.map((n) => (n.id === id ? { ...n, position: { x: sx, y: sy } } : n));
+      }
       onUpdate(next, edges);
     }
   };
@@ -84,8 +114,8 @@ export default function Canvas({
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
       >
-        <svg className="absolute inset-0 w-[2000px] h-[1200px]">
-          {edges.map((e, idx) => {
+  <svg className="absolute inset-0 w-[2000px] h-[1200px]">
+      {edges.map((e, idx) => {
             const a = nodes.find((n) => n.id === e.from);
             const b = nodes.find((n) => n.id === e.to);
             if (!a || !b) return null;
@@ -99,10 +129,12 @@ export default function Canvas({
               <path
                 key={idx}
                 d={d}
-                stroke="#8E8FF7"
-                strokeOpacity={0.6}
-                strokeWidth={2}
-                fill="none"
+        stroke={selectedEdgeIdx === idx ? "#FF6B6B" : "#8E8FF7"}
+        strokeOpacity={0.8}
+        strokeWidth={selectedEdgeIdx === idx ? 4 : 2}
+        fill="none"
+        onClick={() => onSelectEdge?.(idx)}
+        onContextMenu={(ev) => { ev.preventDefault(); onNodeContext?.({ x: ev.clientX, y: ev.clientY, id: `edge:${idx}` }); }}
               />
             );
           })}
@@ -111,12 +143,16 @@ export default function Canvas({
           <div
             key={n.id}
             onDoubleClick={() => startConnect(n.id)}
-            onClick={() => setSelected(n.id)}
+            onClick={() => { setSelected(n.id); onSelectNode?.(n.id); }}
           >
             <Node
               data={n}
               selected={n.id === selected || n.id === connectFrom}
               onMouseDown={startDrag(n.id)}
+              onContext={(ev) => {
+                const rect = (ev.target as HTMLElement).getBoundingClientRect();
+                onNodeContext?.({ x: ev.clientX, y: ev.clientY, id: n.id });
+              }}
             />
           </div>
         ))}

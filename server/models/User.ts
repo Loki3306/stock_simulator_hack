@@ -40,4 +40,4 @@ const UserSchema = new Schema<UserDoc>({
   refreshTokens: { type: [RefreshTokenSchema], default: [] },
 });
 
-export const User = (mongoose as any).models?.User || mongoose.model<UserDoc>("User", UserSchema);
+export const User = (mongoose.models?.User as mongoose.Model<UserDoc>) || mongoose.model<UserDoc>("User", UserSchema);

@@ -34,4 +34,4 @@ const StrategySchema = new Schema<StrategyDoc>({
 
 StrategySchema.index({ title: "text", tags: 1 });
 
-export const Strategy = (mongoose as any).models?.Strategy || mongoose.model<StrategyDoc>("Strategy", StrategySchema);
+export const Strategy = (mongoose.models?.Strategy as mongoose.Model<StrategyDoc>) || mongoose.model<StrategyDoc>("Strategy", StrategySchema);
