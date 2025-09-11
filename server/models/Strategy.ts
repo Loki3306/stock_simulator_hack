@@ -1,4 +1,5 @@
-import mongoose, { Schema, Types } from "mongoose";
+import mongoose from "mongoose";
+import { Schema, Types } from "mongoose";
 
 export interface StrategyDoc {
   _id: Types.ObjectId;
@@ -33,4 +34,4 @@ const StrategySchema = new Schema<StrategyDoc>({
 
 StrategySchema.index({ title: "text", tags: 1 });
 
-export const Strategy = mongoose.models.Strategy || mongoose.model<StrategyDoc>("Strategy", StrategySchema);
+export const Strategy = (mongoose as any).models?.Strategy || mongoose.model<StrategyDoc>("Strategy", StrategySchema);

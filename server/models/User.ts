@@ -1,4 +1,5 @@
-import mongoose, { Schema, Types } from "mongoose";
+import mongoose from "mongoose";
+import { Schema, Types } from "mongoose";
 
 export interface RefreshTokenEntry {
   token: string;
@@ -39,4 +40,4 @@ const UserSchema = new Schema<UserDoc>({
   refreshTokens: { type: [RefreshTokenSchema], default: [] },
 });
 
-export const User = mongoose.models.User || mongoose.model<UserDoc>("User", UserSchema);
+export const User = (mongoose as any).models?.User || mongoose.model<UserDoc>("User", UserSchema);
