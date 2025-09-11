@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
+import Particles from "@/components/visual/Particles";
 
 export default function Index() {
   return (
     <div className="bg-hero-gradient">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 md:py-32">
+        <div className="absolute inset-0"><Particles /></div>
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 md:py-32">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -35,6 +37,18 @@ export default function Index() {
               >
                 Watch Demo Video
               </a>
+            </div>
+            <div className="mt-8 grid grid-cols-3 gap-4 text-sm">
+              {[
+                { k: "Users", v: "10k+" },
+                { k: "Strategies", v: "5k+" },
+                { k: "Avg. Return", v: "+12.3%" },
+              ].map((s) => (
+                <div key={s.k} className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
+                  <div className="text-xs text-muted-foreground">{s.k}</div>
+                  <div className="font-display text-xl">{s.v}</div>
+                </div>
+              ))}
             </div>
           </motion.div>
         </div>
@@ -87,7 +101,7 @@ export default function Index() {
       </section>
 
       {/* Features */}
-      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid gap-6 md:grid-cols-3">
           {[
             {
@@ -111,6 +125,23 @@ export default function Index() {
               <p className="mt-2 text-sm text-muted-foreground">{f.d}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* Showcase */}
+      <section id="demo" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16">
+        <div className="grid gap-6 md:grid-cols-2 items-center">
+          <div className="rounded-xl border border-white/10 bg-white/5 aspect-video grid place-items-center text-muted-foreground">
+            Demo video placeholder
+          </div>
+          <div className="rounded-xl border border-border/60 bg-card/60 p-6">
+            <h3 className="font-display text-xl">Why AlgoTrader Pro?</h3>
+            <ul className="mt-3 space-y-2 text-sm text-muted-foreground list-disc pl-5">
+              <li>Visual strategy builder with smart defaults</li>
+              <li>Real-time preview and quick sims</li>
+              <li>One-click backtests with detailed results</li>
+            </ul>
+          </div>
         </div>
       </section>
 
