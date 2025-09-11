@@ -35,7 +35,8 @@ import {
   Clipboard,
   Map,
   Info,
-  MousePointer2
+  MousePointer2,
+  Trash2
 } from 'lucide-react';
 
 // Import our custom node types
@@ -198,45 +199,54 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   // Load imported strategy on component mount
   useEffect(() => {
     const importedStrategyId = localStorage.getItem('imported_strategy_id');
-    if (importedStrategyId) {
+    if (importedStrategyId && !importedStrategyId.startsWith('imported-')) {
+      // This is a marketplace strategy import
       const importedStrategy = repo.getStrategy(importedStrategyId);
       if (importedStrategy && importedStrategy.nodes && importedStrategy.edges) {
-        // Convert the stored nodes to React Flow format
-        const flowNodes = importedStrategy.nodes.map(node => {
-          let nodeType = 'stock'; // default fallback
-          
-          // Map strategy node types to React Flow node types
-          switch (node.type) {
-            case 'indicator':
-              nodeType = 'technicalIndicator';
-              break;
-            case 'condition':
-              nodeType = 'priceCondition';
-              break;
-            case 'action':
-              nodeType = 'orderType'; // Use orderType for actions like BUY/SELL
-              break;
-            case 'option':
-              nodeType = 'optionLeg';
-              break;
-            default:
-              nodeType = 'stock'; // fallback to stock node
-          }
+        console.log('Loading marketplace strategy - clearing current state first...');
+        
+        // STEP 1: Clear current state immediately
+        setNodes([]);
+        setEdges([]);
+        
+        // STEP 2: Force a small delay to ensure React state updates
+        setTimeout(() => {
+          // Convert the stored nodes to React Flow format
+          const flowNodes = importedStrategy.nodes.map(node => {
+            let nodeType = 'stock'; // default fallback
+            
+            // Map strategy node types to React Flow node types
+            switch (node.type) {
+              case 'indicator':
+                nodeType = 'technicalIndicator';
+                break;
+              case 'condition':
+                nodeType = 'priceCondition';
+                break;
+              case 'action':
+                nodeType = 'orderType'; // Use orderType for actions like BUY/SELL
+                break;
+              case 'option':
+                nodeType = 'optionLeg';
+                break;
+              default:
+                nodeType = 'stock'; // fallback to stock node
+            }
 
-          // Get the color for this node type
-          const nodeColors = {
-            stock: { bg: '#1E40AF', border: '#3B82F6' },
-            optionLeg: { bg: '#D97706', border: '#F59E0B' },
-            technicalIndicator: { bg: '#059669', border: '#10B981' },
-            priceCondition: { bg: '#DC2626', border: '#EF4444' },
-            profitTarget: { bg: '#16A34A', border: '#22C55E' },
-            stopLoss: { bg: '#B91C1C', border: '#DC2626' },
-            positionSizing: { bg: '#9333EA', border: '#A855F7' },
-            orderType: { bg: '#EA580C', border: '#FB923C' },
-            payoffChart: { bg: '#0891B2', border: '#06B6D4' }
-          };
+            // Get the color for this node type
+            const nodeColors = {
+              stock: { bg: '#1E40AF', border: '#3B82F6' },
+              optionLeg: { bg: '#D97706', border: '#F59E0B' },
+              technicalIndicator: { bg: '#059669', border: '#10B981' },
+              priceCondition: { bg: '#DC2626', border: '#EF4444' },
+              profitTarget: { bg: '#16A34A', border: '#22C55E' },
+              stopLoss: { bg: '#B91C1C', border: '#DC2626' },
+              positionSizing: { bg: '#9333EA', border: '#A855F7' },
+              orderType: { bg: '#EA580C', border: '#FB923C' },
+              payoffChart: { bg: '#0891B2', border: '#06B6D4' }
+            };
 
-          const colors = nodeColors[nodeType as keyof typeof nodeColors] || nodeColors.stock;
+            const colors = nodeColors[nodeType as keyof typeof nodeColors] || nodeColors.stock;
           
           return {
             id: node.id,
@@ -272,6 +282,7 @@ const ProfessionalStrategyBuilder: React.FC = () => {
         // Apply spacing to nodes using flowchart layout
         const spacedNodes = addNodeSpacing(flowNodes, flowEdges);
         
+        console.log('Setting marketplace strategy nodes:', spacedNodes.length, 'edges:', flowEdges.length);
         setNodes(spacedNodes);
         setEdges(flowEdges);
         saveToHistory(spacedNodes, flowEdges);
@@ -283,13 +294,18 @@ const ProfessionalStrategyBuilder: React.FC = () => {
           nodes: flowNodes.length,
           edges: flowEdges.length
         });
+        }, 100);
       }
     }
   }, [setNodes, setEdges, saveToHistory]);
 
   // Auto-save current strategy state to localStorage for persistence across reloads
   const saveCurrentStrategy = useCallback(() => {
-    if (nodes.length > 0 || edges.length > 0) {
+    // Don't auto-save if we just imported a strategy (give it some time to settle)
+    const importedStrategyId = localStorage.getItem('imported_strategy_id');
+    const isRecentImport = importedStrategyId && (Date.now() - parseInt(importedStrategyId.split('-')[1] || '0')) < 5000; // 5 seconds grace period
+    
+    if (!isRecentImport && (nodes.length > 0 || edges.length > 0)) {
       const currentStrategy = {
         nodes,
         edges,
@@ -320,6 +336,11 @@ const ProfessionalStrategyBuilder: React.FC = () => {
           localStorage.removeItem('current_strategy_state'); // Clean up corrupted data
         }
       }
+    } else {
+      // Clear the imported flag after initial load
+      setTimeout(() => {
+        localStorage.removeItem('imported_strategy_id');
+      }, 2000); // Clear after 2 seconds
     }
   }, []); // Empty dependency array - only run once on mount
 
@@ -374,12 +395,32 @@ const ProfessionalStrategyBuilder: React.FC = () => {
             
             // Validate the imported strategy has the required structure
             if (importedStrategy.nodes && importedStrategy.edges) {
-              // Apply spacing to imported nodes using flowchart layout
-              const spacedNodes = addNodeSpacing(importedStrategy.nodes, importedStrategy.edges);
-              setNodes(spacedNodes);
-              setEdges(importedStrategy.edges);
-              saveToHistory(spacedNodes, importedStrategy.edges);
-              console.log('Strategy imported successfully:', importedStrategy);
+              console.log('Starting strategy import - clearing current state...');
+              
+              // STEP 1: Clear ALL current state immediately
+              setNodes([]);
+              setEdges([]);
+              
+              // STEP 2: Clear localStorage to prevent conflicts
+              localStorage.removeItem('current_strategy_state');
+              localStorage.removeItem('imported_strategy_id');
+              
+              // STEP 3: Force a small delay to ensure React state updates
+              setTimeout(() => {
+                // Apply spacing to imported nodes using flowchart layout
+                const spacedNodes = addNodeSpacing(importedStrategy.nodes, importedStrategy.edges);
+                console.log('Loading imported strategy with nodes:', spacedNodes.length, 'edges:', importedStrategy.edges.length);
+                
+                setNodes(spacedNodes);
+                setEdges(importedStrategy.edges);
+                saveToHistory(spacedNodes, importedStrategy.edges);
+                
+                // Mark that we've imported a new strategy to prevent auto-load
+                localStorage.setItem('imported_strategy_id', `imported-${Date.now()}`);
+                
+                console.log('Strategy imported successfully:', importedStrategy);
+              }, 100); // Small delay to ensure state clearing
+              
             } else {
               alert('Invalid strategy file format');
             }
@@ -972,6 +1013,21 @@ const ProfessionalStrategyBuilder: React.FC = () => {
           >
             <FileUp size={16} />
             <span>Import</span>
+          </button>
+          <button 
+            onClick={() => {
+              if (confirm('Are you sure you want to clear the canvas? This will remove all nodes and edges.')) {
+                setNodes([]);
+                setEdges([]);
+                localStorage.removeItem('current_strategy_state');
+                localStorage.removeItem('imported_strategy_id');
+                console.log('Canvas cleared successfully');
+              }
+            }}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <Trash2 size={16} />
+            <span>Clear</span>
           </button>
           <button 
             onClick={saveStateToHistory}
