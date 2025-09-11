@@ -14,6 +14,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  googleLogin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,7 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data } = await api.get("/auth/user");
         setUser(data);
-      } catch {}
+      } catch {
+        setUser(null);
+      }
       setLoading(false);
     })();
   }, []);
@@ -78,8 +81,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }
 
+  // Mock Google login
+  async function googleLogin() {
+    // Simulate Google login (replace with real logic as needed)
+    setAccessToken("mock-google-token");
+    setUser({
+      id: "google-mock",
+      email: "googleuser@example.com",
+      name: "Google User",
+      role: "user",
+      settings: { reduceMotion: false, theme: "dark" },
+    });
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, googleLogin }}>
       {children}
     </AuthContext.Provider>
   );

@@ -29,7 +29,7 @@ const RefreshTokenSchema = new Schema<RefreshTokenEntry>({
 
 const UserSchema = new Schema<UserDoc>({
   email: { type: String, required: true, unique: true, index: true },
-  passwordHash: { type: String, required: true },
+  passwordHash: { type: String },
   name: { type: String, required: true },
   role: { type: String, enum: ["user", "author", "admin"], default: "user" },
   createdAt: { type: Date, default: Date.now },
@@ -38,6 +38,7 @@ const UserSchema = new Schema<UserDoc>({
     theme: { type: String, enum: ["dark", "light"], default: "dark" },
   },
   refreshTokens: { type: [RefreshTokenSchema], default: [] },
+  googleId: { type: String, unique: true, sparse: true },
 });
 
 export const User = (mongoose.models?.User as mongoose.Model<UserDoc>) || mongoose.model<UserDoc>("User", UserSchema);

@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import { handleDemo } from "./routes/demo";
 import { connectDB } from "./db";
 import { authRouter } from "./routes/auth";
+import { googleAuthRouter } from "./routes/googleAuth";
 import { usersRouter } from "./routes/users";
 import { strategiesRouter } from "./routes/strategies";
 import { marketplaceRouter } from "./routes/marketplace";
@@ -40,6 +41,7 @@ export function createServer() {
   app.get("/api/demo", handleDemo);
 
   app.use("/api/auth", authLimiter, authRouter);
+  app.use("/api/auth", googleAuthRouter);
   app.use("/api/users", usersRouter);
   app.use("/api/strategies", strategiesRouter);
   app.use("/api/backtests", backtestsRouter);
