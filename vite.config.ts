@@ -8,9 +8,13 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     fs: {
-      allow: ["./client", "./shared"],
+      allow: [
+        '.', // allow serving files from project root
+        'client',
+        'shared'
+      ],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
-    },
+    }
   },
   build: {
     outDir: "dist/spa",
