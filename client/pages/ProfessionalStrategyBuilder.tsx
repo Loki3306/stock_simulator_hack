@@ -963,12 +963,12 @@ const ProfessionalStrategyBuilder: React.FC = () => {
             <button 
               onClick={() => {
                 const testNode = {
-                  id: 'test-stock-node',
+                  id: `test-stock-node-${Date.now()}`,
                   type: 'stock',
                   position: { x: 100, y: 100 },
                   data: { symbol: 'AAPL', price: 150, quantity: 100 }
                 };
-                setNodes([testNode]);
+                setNodes((nds) => [...nds, testNode]);
                 setSelectedNodeId(testNode.id);
                 setIsEditorOpen(true);
                 console.log('Created test node and opened editor');
