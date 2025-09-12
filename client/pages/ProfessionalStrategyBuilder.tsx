@@ -35,8 +35,7 @@ import {
   Clipboard,
   Map,
   Info,
-  MousePointer2,
-  Trash2
+  MousePointer2
 } from 'lucide-react';
 
 // Import our custom node types
@@ -102,90 +101,161 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { strategyData, exportStrategy, validateStrategy } = useStrategyStore();
   
-  // Function to create HORIZONTAL layout with separated branches (no overlapping)
+  // Function to create flowchart layout based on node connections
   const createFlowchartLayout = useCallback((nodes: any[], edges: any[]) => {
     if (nodes.length === 0) return nodes;
     
-    // Build connection map to understand relationships
-    const incoming: Record<string, string[]> = {};
-    const outgoing: Record<string, string[]> = {};
+    // Build adjacency lists for input and output connections
+    const outgoing = new Map(); // node -> [connected nodes]
+    const incoming = new Map(); // node -> [source nodes]
     
+    // Initialize maps
     nodes.forEach(node => {
-      incoming[node.id] = [];
-      outgoing[node.id] = [];
+      outgoing.set(node.id, []);
+      incoming.set(node.id, []);
     });
     
+    // Populate connection maps
     edges.forEach(edge => {
-      if (outgoing[edge.from] && incoming[edge.to]) {
-        outgoing[edge.from].push(edge.to);
-        incoming[edge.to].push(edge.from);
+      if (outgoing.has(edge.from) && incoming.has(edge.to)) {
+        outgoing.get(edge.from).push(edge.to);
+        incoming.get(edge.to).push(edge.from);
       }
     });
     
-    // HORIZONTAL LAYOUT with branch separation
-    const HORIZONTAL_GAP = 350;     // Space between nodes horizontally
-    const BRANCH_SEPARATION = 120;  // Vertical offset for separate branches
-    const BASE_Y = 300;             // Base Y level
-    const START_X = 150;            // Starting X position
+    // Find root nodes (no incoming connections) and leaf nodes (no outgoing connections)
+    const rootNodes = nodes.filter(node => incoming.get(node.id).length === 0);
+    const leafNodes = nodes.filter(node => outgoing.get(node.id).length === 0);
     
-    // Create horizontal layout with branch offsets
-    return nodes.map((node, index) => {
-      // Calculate vertical offset based on connections to avoid overlaps
-      let yOffset = 0;
+    // If no clear hierarchy, fallback to intelligent grid
+    if (rootNodes.length === 0 || rootNodes.length === nodes.length) {
+      return createIntelligentGrid(nodes, edges);
+    }
+    
+    // Perform hierarchical layout
+    const positioned = new Map();
+    const layers = [];
+    
+    // BFS to create layers
+    const visited = new Set();
+    let currentLayer = [...rootNodes];
+    layers.push([...currentLayer]);
+    
+    currentLayer.forEach(node => {
+      visited.add(node.id);
+      positioned.set(node.id, { layer: 0, order: layers[0].indexOf(node) });
+    });
+    
+    let layerIndex = 1;
+    while (currentLayer.length > 0) {
+      const nextLayer = [];
+      currentLayer.forEach(node => {
+        outgoing.get(node.id).forEach(targetId => {
+          if (!visited.has(targetId)) {
+            const targetNode = nodes.find(n => n.id === targetId);
+            if (targetNode) {
+              nextLayer.push(targetNode);
+              visited.add(targetId);
+            }
+          }
+        });
+      });
       
-      // If node has multiple incoming connections, offset it
-      const incomingCount = incoming[node.id]?.length || 0;
-      const outgoingCount = outgoing[node.id]?.length || 0;
-      
-      // Create staggered pattern for nodes with multiple connections
-      if (incomingCount > 1 || outgoingCount > 1) {
-        yOffset = (index % 3 - 1) * BRANCH_SEPARATION; // -120, 0, +120 pattern
-      } else {
-        yOffset = (index % 2) * (BRANCH_SEPARATION / 2); // Slight alternating offset
+      if (nextLayer.length > 0) {
+        layers.push([...nextLayer]);
+        nextLayer.forEach((node, order) => {
+          positioned.set(node.id, { layer: layerIndex, order });
+        });
+        layerIndex++;
       }
+      
+      currentLayer = nextLayer;
+    }
+    
+    // Handle any unvisited nodes (isolated nodes)
+    const unvisited = nodes.filter(node => !visited.has(node.id));
+    if (unvisited.length > 0) {
+      layers.push(unvisited);
+      unvisited.forEach((node, order) => {
+        positioned.set(node.id, { layer: layerIndex, order });
+      });
+    }
+    
+    // Calculate positions based on layers
+    const layerHeight = 200;
+    const nodeWidth = 220;
+    const baseX = 100;
+    const baseY = 80;
+    
+    return nodes.map(node => {
+      const pos = positioned.get(node.id) || { layer: 0, order: 0 };
+      const layerNodes = layers[pos.layer] || [node];
+      const layerWidth = layerNodes.length * nodeWidth;
+      const startX = baseX + (pos.layer * 50); // Slight offset per layer for better flow
+      
+      // Center nodes in each layer
+      const x = startX + (pos.order * nodeWidth) - (layerWidth / 2) + (layerWidth / layerNodes.length / 2);
+      const y = baseY + (pos.layer * layerHeight);
       
       return {
         ...node,
-        position: {
-          x: START_X + (index * HORIZONTAL_GAP),  // Keep horizontal progression
-          y: BASE_Y + yOffset                     // Add vertical separation for branches
-        }
+        position: { x, y }
       };
     });
   }, []);
   
-  // Fallback horizontal grid layout
-  const createHorizontalGrid = useCallback((nodes: any[]) => {
-    const HORIZONTAL_SPACING = 400;
-    const VERTICAL_SPACING = 200;
-    const START_X = 100;
-    const START_Y = 100;
-    
-    return nodes.map((node, index) => ({
-      ...node,
-      position: {
-        x: START_X + (index % 4) * HORIZONTAL_SPACING, // 4 nodes per row
-        y: START_Y + Math.floor(index / 4) * VERTICAL_SPACING
-      }
-    }));
-  }, []);
-  
-  // Horizontal intelligent grid for complex graphs
+  // Fallback intelligent grid for complex graphs
   const createIntelligentGrid = useCallback((nodes: any[], edges: any[]) => {
-    // HORIZONTAL LAYOUT - arrange nodes left to right
-    const HORIZONTAL_SPACING = 400;
-    const VERTICAL_SPACING = 200;
-    const START_X = 100;
-    const START_Y = 100;
-    const NODES_PER_ROW = 3; // Max nodes per row before wrapping
-    
-    return nodes.map((node, index) => ({
-      ...node,
-      position: {
-        x: START_X + (index % NODES_PER_ROW) * HORIZONTAL_SPACING,
-        y: START_Y + Math.floor(index / NODES_PER_ROW) * VERTICAL_SPACING
+    // Group nodes by type for better organization
+    const nodesByType = new Map();
+    nodes.forEach(node => {
+      const type = node.type || 'unknown';
+      if (!nodesByType.has(type)) {
+        nodesByType.set(type, []);
       }
-    }));
+      nodesByType.get(type).push(node);
+    });
+    
+    // Define type order for logical flow
+    const typeOrder = ['data', 'indicator', 'condition', 'signal', 'action', 'execution', 'risk', 'option'];
+    const sortedTypes = [];
+    
+    // Add types in preferred order
+    typeOrder.forEach(type => {
+      if (nodesByType.has(type)) {
+        sortedTypes.push({ type, nodes: nodesByType.get(type) });
+        nodesByType.delete(type);
+      }
+    });
+    
+    // Add any remaining types
+    nodesByType.forEach((nodes, type) => {
+      sortedTypes.push({ type, nodes });
+    });
+    
+    // Layout nodes in columns by type
+    const columnWidth = 280;
+    const rowHeight = 150;
+    const baseX = 100;
+    const baseY = 100;
+    
+    const positioned = [];
+    let currentX = baseX;
+    
+    sortedTypes.forEach(({ type, nodes }) => {
+      nodes.forEach((node, index) => {
+        positioned.push({
+          ...node,
+          position: {
+            x: currentX,
+            y: baseY + (index * rowHeight)
+          }
+        });
+      });
+      currentX += columnWidth;
+    });
+    
+    return positioned;
   }, []);
 
   // Function to add spacing to imported nodes (now uses flowchart layout)
@@ -199,54 +269,45 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   // Load imported strategy on component mount
   useEffect(() => {
     const importedStrategyId = localStorage.getItem('imported_strategy_id');
-    if (importedStrategyId && !importedStrategyId.startsWith('imported-')) {
-      // This is a marketplace strategy import
+    if (importedStrategyId) {
       const importedStrategy = repo.getStrategy(importedStrategyId);
       if (importedStrategy && importedStrategy.nodes && importedStrategy.edges) {
-        console.log('Loading marketplace strategy - clearing current state first...');
-        
-        // STEP 1: Clear current state immediately
-        setNodes([]);
-        setEdges([]);
-        
-        // STEP 2: Force a small delay to ensure React state updates
-        setTimeout(() => {
-          // Convert the stored nodes to React Flow format
-          const flowNodes = importedStrategy.nodes.map(node => {
-            let nodeType = 'stock'; // default fallback
-            
-            // Map strategy node types to React Flow node types
-            switch (node.type) {
-              case 'indicator':
-                nodeType = 'technicalIndicator';
-                break;
-              case 'condition':
-                nodeType = 'priceCondition';
-                break;
-              case 'action':
-                nodeType = 'orderType'; // Use orderType for actions like BUY/SELL
-                break;
-              case 'option':
-                nodeType = 'optionLeg';
-                break;
-              default:
-                nodeType = 'stock'; // fallback to stock node
-            }
+        // Convert the stored nodes to React Flow format
+        const flowNodes = importedStrategy.nodes.map(node => {
+          let nodeType = 'stock'; // default fallback
+          
+          // Map strategy node types to React Flow node types
+          switch (node.type) {
+            case 'indicator':
+              nodeType = 'technicalIndicator';
+              break;
+            case 'condition':
+              nodeType = 'priceCondition';
+              break;
+            case 'action':
+              nodeType = 'orderType'; // Use orderType for actions like BUY/SELL
+              break;
+            case 'option':
+              nodeType = 'optionLeg';
+              break;
+            default:
+              nodeType = 'stock'; // fallback to stock node
+          }
 
-            // Get the color for this node type
-            const nodeColors = {
-              stock: { bg: '#1E40AF', border: '#3B82F6' },
-              optionLeg: { bg: '#D97706', border: '#F59E0B' },
-              technicalIndicator: { bg: '#059669', border: '#10B981' },
-              priceCondition: { bg: '#DC2626', border: '#EF4444' },
-              profitTarget: { bg: '#16A34A', border: '#22C55E' },
-              stopLoss: { bg: '#B91C1C', border: '#DC2626' },
-              positionSizing: { bg: '#9333EA', border: '#A855F7' },
-              orderType: { bg: '#EA580C', border: '#FB923C' },
-              payoffChart: { bg: '#0891B2', border: '#06B6D4' }
-            };
+          // Get the color for this node type
+          const nodeColors = {
+            stock: { bg: '#1E40AF', border: '#3B82F6' },
+            optionLeg: { bg: '#D97706', border: '#F59E0B' },
+            technicalIndicator: { bg: '#059669', border: '#10B981' },
+            priceCondition: { bg: '#DC2626', border: '#EF4444' },
+            profitTarget: { bg: '#16A34A', border: '#22C55E' },
+            stopLoss: { bg: '#B91C1C', border: '#DC2626' },
+            positionSizing: { bg: '#9333EA', border: '#A855F7' },
+            orderType: { bg: '#EA580C', border: '#FB923C' },
+            payoffChart: { bg: '#0891B2', border: '#06B6D4' }
+          };
 
-            const colors = nodeColors[nodeType as keyof typeof nodeColors] || nodeColors.stock;
+          const colors = nodeColors[nodeType as keyof typeof nodeColors] || nodeColors.stock;
           
           return {
             id: node.id,
@@ -282,7 +343,6 @@ const ProfessionalStrategyBuilder: React.FC = () => {
         // Apply spacing to nodes using flowchart layout
         const spacedNodes = addNodeSpacing(flowNodes, flowEdges);
         
-        console.log('Setting marketplace strategy nodes:', spacedNodes.length, 'edges:', flowEdges.length);
         setNodes(spacedNodes);
         setEdges(flowEdges);
         saveToHistory(spacedNodes, flowEdges);
@@ -294,64 +354,9 @@ const ProfessionalStrategyBuilder: React.FC = () => {
           nodes: flowNodes.length,
           edges: flowEdges.length
         });
-        }, 100);
       }
     }
   }, [setNodes, setEdges, saveToHistory]);
-
-  // Auto-save current strategy state to localStorage for persistence across reloads
-  const saveCurrentStrategy = useCallback(() => {
-    // Don't auto-save if we just imported a strategy (give it some time to settle)
-    const importedStrategyId = localStorage.getItem('imported_strategy_id');
-    const isRecentImport = importedStrategyId && (Date.now() - parseInt(importedStrategyId.split('-')[1] || '0')) < 5000; // 5 seconds grace period
-    
-    if (!isRecentImport && (nodes.length > 0 || edges.length > 0)) {
-      const currentStrategy = {
-        nodes,
-        edges,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('current_strategy_state', JSON.stringify(currentStrategy));
-      console.log('Strategy state saved to localStorage');
-    }
-  }, [nodes, edges]);
-
-  // Load saved strategy state on page reload (if no imported strategy)
-  useEffect(() => {
-    // Only load saved state if we didn't already load an imported strategy
-    const importedStrategyId = localStorage.getItem('imported_strategy_id');
-    if (!importedStrategyId) {
-      const savedState = localStorage.getItem('current_strategy_state');
-      if (savedState) {
-        try {
-          const { nodes: savedNodes, edges: savedEdges } = JSON.parse(savedState);
-          if (savedNodes && savedNodes.length > 0) {
-            setNodes(savedNodes);
-            setEdges(savedEdges || []);
-            saveToHistory(savedNodes, savedEdges || []);
-            console.log('Restored strategy state from localStorage');
-          }
-        } catch (error) {
-          console.error('Error loading saved strategy state:', error);
-          localStorage.removeItem('current_strategy_state'); // Clean up corrupted data
-        }
-      }
-    } else {
-      // Clear the imported flag after initial load
-      setTimeout(() => {
-        localStorage.removeItem('imported_strategy_id');
-      }, 2000); // Clear after 2 seconds
-    }
-  }, []); // Empty dependency array - only run once on mount
-
-  // Auto-save strategy state when nodes or edges change (debounced)
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      saveCurrentStrategy();
-    }, 1000); // Debounce saves by 1 second
-
-    return () => clearTimeout(timeoutId);
-  }, [nodes, edges, saveCurrentStrategy]);
   
   // Remove the automatic sync that was causing infinite loops
   // We'll update the store manually when needed
@@ -395,32 +400,12 @@ const ProfessionalStrategyBuilder: React.FC = () => {
             
             // Validate the imported strategy has the required structure
             if (importedStrategy.nodes && importedStrategy.edges) {
-              console.log('Starting strategy import - clearing current state...');
-              
-              // STEP 1: Clear ALL current state immediately
-              setNodes([]);
-              setEdges([]);
-              
-              // STEP 2: Clear localStorage to prevent conflicts
-              localStorage.removeItem('current_strategy_state');
-              localStorage.removeItem('imported_strategy_id');
-              
-              // STEP 3: Force a small delay to ensure React state updates
-              setTimeout(() => {
-                // Apply spacing to imported nodes using flowchart layout
-                const spacedNodes = addNodeSpacing(importedStrategy.nodes, importedStrategy.edges);
-                console.log('Loading imported strategy with nodes:', spacedNodes.length, 'edges:', importedStrategy.edges.length);
-                
-                setNodes(spacedNodes);
-                setEdges(importedStrategy.edges);
-                saveToHistory(spacedNodes, importedStrategy.edges);
-                
-                // Mark that we've imported a new strategy to prevent auto-load
-                localStorage.setItem('imported_strategy_id', `imported-${Date.now()}`);
-                
-                console.log('Strategy imported successfully:', importedStrategy);
-              }, 100); // Small delay to ensure state clearing
-              
+              // Apply spacing to imported nodes using flowchart layout
+              const spacedNodes = addNodeSpacing(importedStrategy.nodes, importedStrategy.edges);
+              setNodes(spacedNodes);
+              setEdges(importedStrategy.edges);
+              saveToHistory(spacedNodes, importedStrategy.edges);
+              console.log('Strategy imported successfully:', importedStrategy);
             } else {
               alert('Invalid strategy file format');
             }
@@ -1015,21 +1000,6 @@ const ProfessionalStrategyBuilder: React.FC = () => {
             <span>Import</span>
           </button>
           <button 
-            onClick={() => {
-              if (confirm('Are you sure you want to clear the canvas? This will remove all nodes and edges.')) {
-                setNodes([]);
-                setEdges([]);
-                localStorage.removeItem('current_strategy_state');
-                localStorage.removeItem('imported_strategy_id');
-                console.log('Canvas cleared successfully');
-              }
-            }}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center space-x-2"
-          >
-            <Trash2 size={16} />
-            <span>Clear</span>
-          </button>
-          <button 
             onClick={saveStateToHistory}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center space-x-2"
           >
@@ -1081,14 +1051,8 @@ const ProfessionalStrategyBuilder: React.FC = () => {
                 defaultEdgeOptions={edgeOptions}
                 multiSelectionKeyCode="Control"
                 panOnDrag={[1, 2]}
-                panOnScroll
-                zoomOnScroll
-                zoomOnPinch
-                zoomOnDoubleClick={false}
                 selectionOnDrag
                 fitView
-                minZoom={0.1}
-                maxZoom={2}
                 attributionPosition="bottom-left"
               >
                 <Controls
