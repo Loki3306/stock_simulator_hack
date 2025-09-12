@@ -35,7 +35,9 @@ import {
   Clipboard,
   Map as MapIcon,
   Info,
-  MousePointer2
+  MousePointer2,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 // Import our custom node types
@@ -53,7 +55,9 @@ import NodePalette from '../components/strategy-builder/NodePalette';
 import NodeEditor from '../components/strategy-builder/NodeEditor';
 import EdgeEditor from '../components/strategy-builder/EdgeEditor';
 import StrategyMetrics from '../components/strategy-builder/StrategyMetrics';
+import { Badge } from '../components/ui/badge';
 import { useStrategyStore } from '../stores/strategyStore';
+import { toast } from '../hooks/use-toast';
 import { repo } from '../lib/mockRepo';
 
 // Define node types
@@ -89,6 +93,9 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   const { setSelectedNodeId, selectedNodeId, undo, redo, canUndo, canRedo, saveToHistory } = useStrategyStore();
   const [isPaletteOpen, setIsPaletteOpen] = useState(true);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+  const [rightWidth, setRightWidth] = useState(420);
   const [gridEnabled, setGridEnabled] = useState(true);
   const [copiedNodes, setCopiedNodes] = useState<Node[]>([]);
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
@@ -99,109 +106,119 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   const [showNodeLegend, setShowNodeLegend] = useState(false);
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const didLoadImportedRef = useRef(false);
   const { strategyData, exportStrategy, validateStrategy } = useStrategyStore();
+  const runBacktest = useStrategyStore(s => s.runBacktest);
   
   // Function to create flowchart layout based on node connections
   const createFlowchartLayout = useCallback((nodes: any[], edges: any[]) => {
     if (nodes.length === 0) return nodes;
-    
+
     // Build adjacency lists for input and output connections
-    const outgoing = new Map(); // node -> [connected nodes]
-    const incoming = new Map(); // node -> [source nodes]
-    
-    // Initialize maps
-    nodes.forEach(node => {
-      outgoing.set(node.id, []);
-      incoming.set(node.id, []);
+    const nodeById = new Map<string, any>();
+    nodes.forEach(n => nodeById.set(n.id, n));
+
+    const outgoing = new Map<string, string[]>();
+    const incoming = new Map<string, string[]>();
+    nodes.forEach(n => {
+      outgoing.set(n.id, []);
+      incoming.set(n.id, []);
     });
-    
-    // Populate connection maps
+
     edges.forEach(edge => {
-      if (outgoing.has(edge.from) && incoming.has(edge.to)) {
-        outgoing.get(edge.from).push(edge.to);
-        incoming.get(edge.to).push(edge.from);
+      const fromId = (edge as any).from ?? (edge as any).source;
+      const toId = (edge as any).to ?? (edge as any).target;
+      if (fromId && toId && outgoing.has(fromId) && incoming.has(toId)) {
+        outgoing.get(fromId)!.push(toId);
+        incoming.get(toId)!.push(fromId);
       }
     });
-    
-    // Find root nodes (no incoming connections) and leaf nodes (no outgoing connections)
-    const rootNodes = nodes.filter(node => incoming.get(node.id).length === 0);
-    const leafNodes = nodes.filter(node => outgoing.get(node.id).length === 0);
-    
-    // If no clear hierarchy, fallback to intelligent grid
-    if (rootNodes.length === 0 || rootNodes.length === nodes.length) {
+
+    // Identify root nodes (no incoming)
+    const roots = nodes.filter(n => (incoming.get(n.id) || []).length === 0);
+    if (roots.length === 0 || roots.length === nodes.length) {
       return createIntelligentGrid(nodes, edges);
     }
-    
-    // Perform hierarchical layout
-    const positioned = new Map();
-    const layers = [];
-    
-    // BFS to create layers
-    const visited = new Set();
-    let currentLayer = [...rootNodes];
-    layers.push([...currentLayer]);
-    
-    currentLayer.forEach(node => {
-      visited.add(node.id);
-      positioned.set(node.id, { layer: 0, order: layers[0].indexOf(node) });
-    });
-    
-    let layerIndex = 1;
-    while (currentLayer.length > 0) {
-      const nextLayer = [];
-      currentLayer.forEach(node => {
-        outgoing.get(node.id).forEach(targetId => {
-          if (!visited.has(targetId)) {
-            const targetNode = nodes.find(n => n.id === targetId);
-            if (targetNode) {
-              nextLayer.push(targetNode);
-              visited.add(targetId);
-            }
-          }
-        });
+
+    // BFS to assign levels (distance from any root)
+    const level = new Map<string, number>();
+    const q: string[] = [];
+    const visited = new Set<string>();
+    roots.forEach(r => { level.set(r.id, 0); q.push(r.id); visited.add(r.id); });
+
+    while (q.length > 0) {
+      const id = q.shift()!;
+      const lvl = level.get(id)!;
+      (outgoing.get(id) || []).forEach(nb => {
+        if (!visited.has(nb)) {
+          level.set(nb, lvl + 1);
+          visited.add(nb);
+          q.push(nb);
+        } else {
+          // keep smallest level if already set
+          const existing = level.get(nb) ?? Infinity;
+          level.set(nb, Math.min(existing, lvl + 1));
+        }
       });
-      
-      if (nextLayer.length > 0) {
-        layers.push([...nextLayer]);
-        nextLayer.forEach((node, order) => {
-          positioned.set(node.id, { layer: layerIndex, order });
-        });
-        layerIndex++;
+    }
+
+    // Ensure all nodes have a level
+    let maxLevel = 0;
+    nodes.forEach(n => {
+      if (!level.has(n.id)) {
+        level.set(n.id, maxLevel + 1);
+        maxLevel++;
+      } else {
+        maxLevel = Math.max(maxLevel, level.get(n.id)!);
       }
-      
-      currentLayer = nextLayer;
-    }
-    
-    // Handle any unvisited nodes (isolated nodes)
-    const unvisited = nodes.filter(node => !visited.has(node.id));
-    if (unvisited.length > 0) {
-      layers.push(unvisited);
-      unvisited.forEach((node, order) => {
-        positioned.set(node.id, { layer: layerIndex, order });
-      });
-    }
-    
-    // Calculate positions based on layers
-    const layerHeight = 200;
-    const nodeWidth = 220;
-    const baseX = 100;
-    const baseY = 80;
-    
-    return nodes.map(node => {
-      const pos = positioned.get(node.id) || { layer: 0, order: 0 };
-      const layerNodes = layers[pos.layer] || [node];
-      const layerWidth = layerNodes.length * nodeWidth;
-      const startX = baseX + (pos.layer * 50); // Slight offset per layer for better flow
-      
-      // Center nodes in each layer
-      const x = startX + (pos.order * nodeWidth) - (layerWidth / 2) + (layerWidth / layerNodes.length / 2);
-      const y = baseY + (pos.layer * layerHeight);
-      
-      return {
-        ...node,
-        position: { x, y }
-      };
     });
+
+    // Group nodes by level into layers
+    const layers: string[][] = [];
+    nodes.forEach(n => {
+      const l = level.get(n.id) || 0;
+      layers[l] = layers[l] || [];
+      layers[l].push(n.id);
+    });
+
+    // Order nodes within layers using barycenter heuristic to reduce edge crossings
+    const iterations = 3;
+    for (let it = 0; it < iterations; it++) {
+      for (let li = 1; li < layers.length; li++) {
+        const prev = layers[li - 1];
+        const cur = layers[li];
+        const indexMap = new Map<string, number>();
+        prev.forEach((id, idx) => indexMap.set(id, idx));
+
+        cur.sort((a, b) => {
+          const parentsA = (incoming.get(a) || []).filter(p => indexMap.has(p)).map(p => indexMap.get(p)!);
+          const parentsB = (incoming.get(b) || []).filter(p => indexMap.has(p)).map(p => indexMap.get(p)!);
+          const avgA = parentsA.length ? (parentsA.reduce((s, v) => s + v, 0) / parentsA.length) : Infinity;
+          const avgB = parentsB.length ? (parentsB.reduce((s, v) => s + v, 0) / parentsB.length) : Infinity;
+          return avgA - avgB;
+        });
+      }
+    }
+
+    // Compute positions: left-to-right layers, vertical spacing per layer
+    const layerSpacingX = 360;
+    const verticalSpacing = 160;
+    const baseX = 120;
+    const baseY = 120;
+
+    const positioned: Record<string, { x: number; y: number }> = {};
+    layers.forEach((layerIds, li) => {
+      const layerCount = layerIds.length;
+      const totalHeight = (layerCount - 1) * verticalSpacing;
+      layerIds.forEach((id, idx) => {
+        const x = baseX + li * layerSpacingX;
+        const y = baseY + idx * verticalSpacing - totalHeight / 2;
+        positioned[id] = { x, y };
+      });
+    });
+
+    // Return nodes with assigned positions
+    return nodes.map(n => ({ ...n, position: positioned[n.id] || n.position || { x: baseX, y: baseY } }));
   }, []);
   
   // Fallback intelligent grid for complex graphs
@@ -268,6 +285,7 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   
   // Load imported strategy on component mount
   useEffect(() => {
+    // 1) If user explicitly imported a strategy from repo
     const importedStrategyId = localStorage.getItem('imported_strategy_id');
     if (importedStrategyId) {
       const importedStrategy = repo.getStrategy(importedStrategyId);
@@ -340,15 +358,31 @@ const ProfessionalStrategyBuilder: React.FC = () => {
           ...edgeOptions,
         }));
         
-        // Apply spacing to nodes using flowchart layout
-        const spacedNodes = addNodeSpacing(flowNodes, flowEdges);
-        
-        setNodes(spacedNodes);
-        setEdges(flowEdges);
-        saveToHistory(spacedNodes, flowEdges);
+        // If imported nodes include explicit positions, preserve them.
+        // Only apply automatic spacing for nodes that lack a valid position.
+        const nodesWithPositions = flowNodes.map(n => {
+          if (n.position && typeof n.position.x === 'number' && typeof n.position.y === 'number') {
+            return n;
+          }
+          return null;
+        });
+
+        const nodesMissingPos = flowNodes.filter((n, i) => nodesWithPositions[i] === null);
+        const spacedForMissing = nodesMissingPos.length > 0 ? addNodeSpacing(nodesMissingPos, flowEdges) : [];
+
+        // Merge preserved positions and generated positions
+        const mergedNodes = flowNodes.map(n => {
+          const found = spacedForMissing.find(fn => fn.id === n.id);
+          return found ? found : n;
+        });
+
+  setNodes(mergedNodes);
+  didLoadImportedRef.current = true;
+  setEdges(flowEdges);
+  saveToHistory(mergedNodes, flowEdges);
         
         // Clear the imported strategy ID so it doesn't reload on refresh
-        localStorage.removeItem('imported_strategy_id');
+  localStorage.removeItem('imported_strategy_id');
         
         console.log('Loaded imported strategy:', importedStrategy.title, {
           nodes: flowNodes.length,
@@ -357,6 +391,54 @@ const ProfessionalStrategyBuilder: React.FC = () => {
       }
     }
   }, [setNodes, setEdges, saveToHistory]);
+
+  // 2) Autosave current layout to localStorage so leaving the page preserves it
+  useEffect(() => {
+    const key = 'psb_autosave_v1';
+    // Debounce save
+    let timer: any = null;
+    const save = () => {
+      const payload = JSON.stringify({ nodes, edges, timestamp: Date.now() });
+      localStorage.setItem(key, payload);
+      // console.log('Autosaved layout');
+    };
+
+    if (nodes.length || edges.length) {
+      clearTimeout(timer);
+      timer = setTimeout(save, 600);
+    }
+
+    const onUnload = () => {
+      save();
+    };
+
+    window.addEventListener('beforeunload', onUnload);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('beforeunload', onUnload);
+    };
+  }, [nodes, edges]);
+
+  // Restore autosave if present (only on mount)
+  useEffect(() => {
+    const key = 'psb_autosave_v1';
+    const raw = localStorage.getItem(key);
+    // If we already loaded an explicit imported strategy, do not restore autosave
+    if (didLoadImportedRef.current) return;
+
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.nodes && parsed.edges) {
+          setNodes(parsed.nodes);
+          setEdges(parsed.edges);
+          console.log('Restored autosaved layout from localStorage');
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [setNodes, setEdges]);
   
   // Remove the automatic sync that was causing infinite loops
   // We'll update the store manually when needed
@@ -400,11 +482,37 @@ const ProfessionalStrategyBuilder: React.FC = () => {
             
             // Validate the imported strategy has the required structure
             if (importedStrategy.nodes && importedStrategy.edges) {
-              // Apply spacing to imported nodes using flowchart layout
-              const spacedNodes = addNodeSpacing(importedStrategy.nodes, importedStrategy.edges);
-              setNodes(spacedNodes);
-              setEdges(importedStrategy.edges);
-              saveToHistory(spacedNodes, importedStrategy.edges);
+              // Preserve explicit positions when present; apply spacing for nodes lacking positions
+              const flowNodes = importedStrategy.nodes.map((node: any) => ({ ...node }));
+              const flowEdges = importedStrategy.edges.map((edge: any) => ({
+                id: `${edge.from}-${edge.to}`,
+                source: edge.from,
+                target: edge.to,
+                ...edgeOptions,
+              }));
+
+              const nodesWithPositions = flowNodes.map((n: any) => {
+                if (n.position && typeof n.position.x === 'number' && typeof n.position.y === 'number') {
+                  return n;
+                }
+                return null;
+              });
+
+              const nodesMissingPos = flowNodes.filter((n: any, i: number) => nodesWithPositions[i] === null);
+              const spacedForMissing = nodesMissingPos.length > 0 ? addNodeSpacing(nodesMissingPos, flowEdges) : [];
+
+              const mergedNodes = flowNodes.map((n: any) => {
+                const found = spacedForMissing.find((fn: any) => fn.id === n.id);
+                return found ? found : n;
+              });
+
+              setNodes(mergedNodes);
+              setEdges(flowEdges);
+              saveToHistory(mergedNodes, flowEdges);
+              // Mark that we just loaded an explicit import so autosave won't override it
+              didLoadImportedRef.current = true;
+              // Clear autosave when user explicitly imports a file (explicit action wins)
+              localStorage.removeItem('psb_autosave_v1');
               console.log('Strategy imported successfully:', importedStrategy);
             } else {
               alert('Invalid strategy file format');
@@ -426,8 +534,8 @@ const ProfessionalStrategyBuilder: React.FC = () => {
       id: `strategy-${Date.now()}`,
       name: `Strategy ${new Date().toLocaleDateString()}`,
       description: 'Exported strategy',
-      nodes,
-      edges,
+      nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
+  edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, from: e.source, to: e.target, animated: e.animated, style: e.style })),
       metadata: {
         created: new Date().toISOString(),
         lastModified: new Date().toISOString(),
@@ -825,9 +933,9 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   }, [setSelectedNodeId]);
 
   return (
-    <div className="h-screen w-full bg-gray-900 flex flex-col">
-      {/* Top Toolbar */}
-      <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4">
+    <div className="min-h-screen w-full bg-gray-900">
+      {/* Sticky Top Header */}
+      <div className="sticky top-0 z-50 h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-4">
         <div className="flex items-center space-x-4">
           <h1 className="text-xl font-bold text-white">Professional Strategy Builder</h1>
           
@@ -981,7 +1089,19 @@ const ProfessionalStrategyBuilder: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-2">
-          <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center space-x-2">
+          <button
+            onClick={async () => {
+              try {
+                const t = toast({ title: 'Backtest started', description: 'Running simulated backtest...' });
+                const res = await runBacktest(nodes, edges);
+                toast({ title: 'Backtest complete', description: 'Results available in Strategy Analytics' });
+                console.log('Backtest results:', res);
+              } catch (err) {
+                toast({ title: 'Backtest failed', description: String(err) });
+              }
+            }}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+          >
             <Play size={16} />
             <span>Backtest</span>
           </button>
@@ -1009,30 +1129,35 @@ const ProfessionalStrategyBuilder: React.FC = () => {
           <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
             <Settings size={18} />
           </button>
-        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Node Palette */}
-        <AnimatePresence>
-          {isPaletteOpen && (
-            <motion.div
-              initial={{ x: -250, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -250, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="w-64 bg-gray-800 border-r border-gray-700 overflow-y-auto"
-            >
+      {/* Main Layout: Sticky Left Palette + Scrollable Main Content */}
+      <div className="flex">
+        {/* Sticky Left Palette */}
+        <div className="sticky top-16 w-80 bg-gray-800 border-r border-gray-700 overflow-y-auto" style={{ height: 'calc(100vh - 4rem)' }}>
+          <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <div className="text-lg font-semibold text-white">Node Palette</div>
+              <button
+                aria-label="Toggle palette"
+                onClick={() => setIsLeftCollapsed(v => !v)}
+                className="p-2 rounded hover:bg-gray-700 text-gray-300"
+              >
+                {isLeftCollapsed ? '→' : '←'}
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-2">
               <NodePalette />
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        </div>
 
-        {/* Center Canvas */}
-        <div className="flex-1 relative">
-          <ReactFlowProvider>
-            <div ref={reactFlowWrapper} className="w-full h-full">
+        {/* Main Scrollable Content */}
+        <div className="flex-1 min-h-screen">
+          {/* Canvas Section - Large minimum height */}
+          <div className="bg-gray-900 relative" style={{ minHeight: '120vh' }}>
+            <ReactFlowProvider>
+              <div ref={reactFlowWrapper} className="w-full h-full">
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -1054,8 +1179,8 @@ const ProfessionalStrategyBuilder: React.FC = () => {
                 panOnScroll={false}
                 zoomOnScroll={true}
                 zoomOnPinch={true}
-                zoomOnDoubleClick={false}
-                selectionOnDrag={false}
+                zoomOnDoubleClick={true}
+                selectionOnDrag
                 fitView
                 attributionPosition="bottom-left"
               >
@@ -1177,61 +1302,73 @@ const ProfessionalStrategyBuilder: React.FC = () => {
                 />
               </ReactFlow>
             </div>
-          </ReactFlowProvider>
+            </ReactFlowProvider>
 
-          {/* Palette Toggle Button */}
-          <button
-            onClick={() => setIsPaletteOpen(!isPaletteOpen)}
-            className="absolute top-4 left-4 p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-600 transition-colors z-10"
-          >
-            <Layers size={18} />
-          </button>
+            {/* Palette Toggle Button */}
+            <button
+              onClick={() => setIsLeftCollapsed(v => !v)}
+              className="absolute top-4 left-4 p-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg border border-gray-600 transition-colors z-10"
+              aria-label="Toggle palette"
+            >
+              <Layers size={18} />
+            </button>
+          </div>
+
+          {/* Strategy Analytics Section - Below Canvas */}
+          <div className="bg-gray-800 border-t border-gray-700" style={{ minHeight: '80vh', padding: '3rem' }}>
+            <div className="max-w-none">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
+                  <BarChart3 size={24} />
+                  <span>Strategy Analytics</span>
+                </h2>
+              </div>
+              <StrategyMetrics isOpen={true} />
+            </div>
+          </div>
         </div>
 
-        {/* Right Sidebar - Node Editor */}
-        <AnimatePresence>
-          {(isEditorOpen || isEdgeEditorOpen) && (
-            <motion.div
-              initial={{ x: 350, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 350, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="w-80 bg-gray-800 border-l border-gray-700 overflow-y-auto"
-            >
-              {isEditorOpen && (
-                <NodeEditor 
-                  isOpen={isEditorOpen}
-                  onClose={() => {
-                    console.log('Closing node editor');
-                    setIsEditorOpen(false);
-                    setSelectedNodeId(null);
-                  }}
-                  nodes={nodes}
-                  onNodesChange={setNodes}
-                />
-              )}
-              
-              {isEdgeEditorOpen && selectedEdge && (
-                <EdgeEditor
-                  edge={selectedEdge}
-                  nodes={nodes}
-                  onUpdateEdge={handleEditEdge}
-                  onDeleteEdge={handleDeleteEdge}
-                  onClose={() => {
-                    console.log('Closing edge editor');
-                    setIsEdgeEditorOpen(false);
-                    setSelectedEdge(null);
-                  }}
-                />
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Bottom Panel - Strategy Metrics */}
-      <div className="h-48 bg-gray-800 border-t border-gray-700 overflow-y-auto">
-        <StrategyMetrics isOpen={true} />
+          {/* Node Editor Overlay */}
+          <AnimatePresence>
+            {(isEditorOpen || isEdgeEditorOpen) && (
+              <motion.div
+                initial={{ x: 350, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 350, opacity: 0 }}
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className="fixed top-16 right-0 bg-gray-800 border-l border-gray-700 overflow-y-auto z-40"
+                style={{ width: 320, height: 'calc(100vh - 4rem)' }}
+              >
+                {isEditorOpen && (
+                  <NodeEditor 
+                    isOpen={isEditorOpen}
+                    onClose={() => {
+                      console.log('Closing node editor');
+                      setIsEditorOpen(false);
+                      setSelectedNodeId(null);
+                    }}
+                    nodes={nodes}
+                    onNodesChange={setNodes}
+                  />
+                )}
+                
+                {isEdgeEditorOpen && selectedEdge && (
+                  <EdgeEditor
+                    edge={selectedEdge}
+                    nodes={nodes}
+                    onUpdateEdge={handleEditEdge}
+                    onDeleteEdge={handleDeleteEdge}
+                    onClose={() => {
+                      console.log('Closing edge editor');
+                      setIsEdgeEditorOpen(false);
+                      setSelectedEdge(null);
+                    }}
+                  />
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
