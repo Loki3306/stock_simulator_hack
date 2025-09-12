@@ -97,6 +97,38 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   const [isDraggingMinimap, setIsDraggingMinimap] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
   const [showNodeLegend, setShowNodeLegend] = useState(false);
+
+  // Load strategy from localStorage on component mount
+  useEffect(() => {
+    const savedStrategy = localStorage.getItem('currentStrategy');
+    if (savedStrategy) {
+      try {
+        const strategy = JSON.parse(savedStrategy);
+        if (strategy.nodes) {
+          setNodes(strategy.nodes);
+        }
+        if (strategy.edges) {
+          setEdges(strategy.edges);
+        }
+        console.log('Loaded strategy from localStorage');
+      } catch (error) {
+        console.error('Error loading strategy from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Save strategy to localStorage whenever nodes or edges change
+  useEffect(() => {
+    if (nodes.length > 0 || edges.length > 0) {
+      const strategy = {
+        nodes,
+        edges,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('currentStrategy', JSON.stringify(strategy));
+      console.log('Auto-saved strategy to localStorage');
+    }
+  }, [nodes, edges]);
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { strategyData, exportStrategy, validateStrategy } = useStrategyStore();
@@ -445,6 +477,17 @@ const ProfessionalStrategyBuilder: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
   }, [nodes, edges]);
+  
+  // Clear strategy functionality
+  const handleClearStrategy = useCallback(() => {
+    setNodes([]);
+    setEdges([]);
+    localStorage.removeItem('currentStrategy');
+    setSelectedNodeId(null);
+    setIsEditorOpen(false);
+    setIsEdgeEditorOpen(false);
+    console.log('Cleared strategy and localStorage');
+  }, [setNodes, setEdges, setSelectedNodeId]);
   
   // Copy/Paste functionality
   const handleCopyNodes = useCallback(() => {
@@ -1005,6 +1048,13 @@ const ProfessionalStrategyBuilder: React.FC = () => {
           >
             <Save size={16} />
             <span>Save</span>
+          </button>
+          <button 
+            onClick={handleClearStrategy}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <Redo size={16} />
+            <span>Clear</span>
           </button>
           <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
             <Settings size={18} />
