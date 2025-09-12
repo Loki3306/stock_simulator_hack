@@ -4,17 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Progress } from '../ui/progress';
 import { useStrategyStore } from '../../stores/strategyStore';
+import { Node, Edge } from 'reactflow';
 
 interface StrategyMetricsProps {
   isOpen: boolean;
+  nodes?: Node[];
+  edges?: Edge[];
 }
 
-const StrategyMetrics: React.FC<StrategyMetricsProps> = ({ isOpen }) => {
+const StrategyMetrics: React.FC<StrategyMetricsProps> = ({ isOpen, nodes: propNodes, edges: propEdges }) => {
   const { strategyData, validationErrors, isValid } = useStrategyStore();
+  
+  // Use prop nodes/edges if provided, otherwise fall back to store
+  const nodes = propNodes || strategyData.nodes;
+  const edges = propEdges || strategyData.edges;
   
   // Calculate comprehensive metrics from the strategy
   const calculateMetrics = () => {
-    const { nodes, edges } = strategyData;
     
     // Basic metrics
     const totalNodes = nodes.length;
@@ -28,7 +34,8 @@ const StrategyMetrics: React.FC<StrategyMetricsProps> = ({ isOpen }) => {
     const hasActions = nodes.some(n => n.type === 'orderType');
     
     const completionSteps = [hasDataSource, hasIndicators, hasConditions, hasActions];
-    const completionRate = Math.min(100, (completionSteps.filter(Boolean).length / completionSteps.length) * 100);
+    // If no nodes exist, completion rate should be 0%
+    const completionRate = totalNodes === 0 ? 0 : Math.min(100, (completionSteps.filter(Boolean).length / completionSteps.length) * 100);
     
     // Node type analysis
     const nodeTypes = nodes.reduce((acc, node) => {
@@ -49,7 +56,8 @@ const StrategyMetrics: React.FC<StrategyMetricsProps> = ({ isOpen }) => {
     complexityScore += branchingFactor * 3; // Branching complexity
     complexityScore += maxDepth; // Depth complexity
     
-    const complexity = complexityScore <= 15 ? 'Simple' : 
+    const complexity = totalNodes === 0 ? 'Empty' :
+                      complexityScore <= 15 ? 'Simple' : 
                       complexityScore <= 35 ? 'Moderate' : 
                       complexityScore <= 60 ? 'Complex' : 'Advanced';
     
@@ -62,7 +70,7 @@ const StrategyMetrics: React.FC<StrategyMetricsProps> = ({ isOpen }) => {
     // Performance indicators
     const diversificationScore = Object.keys(nodeTypes).length * 10; // More node types = more diversified
     const connectionRatio = totalNodes > 0 ? totalConnections / totalNodes : 0;
-    const strategyHealth = isValid ? 100 : Math.max(0, 100 - validationErrors.length * 10);
+    const strategyHealth = totalNodes === 0 ? 0 : (isValid ? 100 : Math.max(0, 100 - validationErrors.length * 10));
     
     // Time-based metrics (simulated)
     const estimatedSetupTime = totalNodes * 2 + totalConnections; // minutes

@@ -89,6 +89,7 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   const { setSelectedNodeId, selectedNodeId, undo, redo, canUndo, canRedo, saveToHistory } = useStrategyStore();
   const [isPaletteOpen, setIsPaletteOpen] = useState(true);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(true);
   const [gridEnabled, setGridEnabled] = useState(true);
   const [copiedNodes, setCopiedNodes] = useState<Node[]>([]);
   const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
@@ -1056,6 +1057,18 @@ const ProfessionalStrategyBuilder: React.FC = () => {
             <Redo size={16} />
             <span>Clear</span>
           </button>
+          <button 
+            onClick={() => setIsAnalyticsOpen(!isAnalyticsOpen)}
+            className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center space-x-2 ${
+              isAnalyticsOpen 
+                ? 'bg-blue-600 hover:bg-blue-700' 
+                : 'bg-gray-600 hover:bg-gray-500'
+            }`}
+            title={isAnalyticsOpen ? "Hide Analytics" : "Show Analytics"}
+          >
+            <BarChart3 size={16} />
+            <span>{isAnalyticsOpen ? 'Hide' : 'Show'} Analytics</span>
+          </button>
           <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
             <Settings size={18} />
           </button>
@@ -1063,7 +1076,7 @@ const ProfessionalStrategyBuilder: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 min-h-0">
         {/* Left Sidebar - Node Palette */}
         <AnimatePresence>
           {isPaletteOpen && (
@@ -1072,7 +1085,7 @@ const ProfessionalStrategyBuilder: React.FC = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -250, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="w-64 bg-gray-800 border-r border-gray-700 overflow-y-auto"
+              className="w-64 bg-gray-800 border-r border-gray-700 overflow-y-auto flex-shrink-0"
             >
               <NodePalette />
             </motion.div>
@@ -1280,9 +1293,11 @@ const ProfessionalStrategyBuilder: React.FC = () => {
       </div>
 
       {/* Bottom Panel - Strategy Metrics */}
-      <div className="h-48 bg-gray-800 border-t border-gray-700 overflow-y-auto">
-        <StrategyMetrics isOpen={true} />
-      </div>
+      {isAnalyticsOpen && (
+        <div className="h-80 bg-gray-800 border-t border-gray-700 overflow-y-auto">
+          <StrategyMetrics isOpen={true} nodes={nodes} edges={edges} />
+        </div>
+      )}
     </div>
   );
 };
