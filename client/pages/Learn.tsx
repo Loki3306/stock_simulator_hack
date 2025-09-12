@@ -1348,6 +1348,7 @@ function PublishButton() {
   const [type, setType] = useState<"blog" | "course" | "video">("blog");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
+  const [author, setAuthor] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [duration, setDuration] = useState("");
   const [category, setCategory] = useState("");
@@ -1382,89 +1383,147 @@ function PublishButton() {
           <span>Publish your knowledge</span>
         </button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col bg-card border border-border/30">
-        <DialogHeader className="flex-shrink-0 pb-4">
-          <DialogTitle className="text-lg font-semibold">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-background/20 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-purple-500/20 before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none before:rounded-2xl">
+        <DialogHeader className="flex-shrink-0 pb-6 border-b border-white/10 bg-white/5 backdrop-blur-sm rounded-t-2xl -m-6 mb-0 p-6">
+          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
+            {type === "blog" ? "📝" : type === "course" ? "🎯" : "🎥"}
             Publish {type === "blog" ? "Blog" : type === "course" ? "Course" : "Video"}
           </DialogTitle>
+          <p className="text-sm text-white/70 mt-2">
+            Share your knowledge with the community and help others learn
+          </p>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto space-y-4 px-1 pb-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40">
-          <div>
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+        <div className="flex-1 overflow-y-auto space-y-6 px-2 py-2 scroll-smooth">
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-white/90 mb-3 block flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-400" />
               Content Type
             </label>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => setType("blog")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`group relative overflow-hidden rounded-xl p-4 backdrop-blur-md border transition-all duration-300 transform hover:scale-105 ${
                   type === "blog" 
-                    ? "btn-gradient text-black" 
-                    : "border border-border/50 hover:border-border/80"
+                    ? "bg-white/10 border-green-400/60 shadow-lg shadow-green-500/20" 
+                    : "bg-white/5 border-white/20 hover:border-green-400/40 hover:bg-white/8"
                 }`}
               >
-                Blog
+                <div className="text-center space-y-2">
+                  <div className="text-2xl">📝</div>
+                  <div className="text-sm font-medium text-white">Blog</div>
+                  <div className="text-xs text-white/60">Written article</div>
+                </div>
+                {type === "blog" && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl"></div>
+                )}
               </button>
               <button
                 onClick={() => setType("course")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`group relative overflow-hidden rounded-xl p-4 backdrop-blur-md border transition-all duration-300 transform hover:scale-105 ${
                   type === "course" 
-                    ? "btn-gradient text-black" 
-                    : "border border-border/50 hover:border-border/80"
+                    ? "bg-white/10 border-orange-400/60 shadow-lg shadow-orange-500/20" 
+                    : "bg-white/5 border-white/20 hover:border-orange-400/40 hover:bg-white/8"
                 }`}
               >
-                Course
+                <div className="text-center space-y-2">
+                  <div className="text-2xl">🎯</div>
+                  <div className="text-sm font-medium text-white">Course</div>
+                  <div className="text-xs text-white/60">Learning series</div>
+                </div>
+                {type === "course" && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl"></div>
+                )}
               </button>
               <button
                 onClick={() => setType("video")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`group relative overflow-hidden rounded-xl p-4 backdrop-blur-md border transition-all duration-300 transform hover:scale-105 ${
                   type === "video" 
-                    ? "btn-gradient text-black" 
-                    : "border border-border/50 hover:border-border/80"
+                    ? "bg-white/10 border-red-400/60 shadow-lg shadow-red-500/20" 
+                    : "bg-white/5 border-white/20 hover:border-red-400/40 hover:bg-white/8"
                 }`}
               >
-                Video
+                <div className="text-center space-y-2">
+                  <div className="text-2xl">🎥</div>
+                  <div className="text-sm font-medium text-white">Video</div>
+                  <div className="text-xs text-white/60">YouTube tutorial</div>
+                </div>
+                {type === "video" && (
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-pink-500/10 rounded-xl"></div>
+                )}
               </button>
             </div>
           </div>
           
-          <div>
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">
-              Title *
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-white/90 block flex items-center gap-2">
+              <span className="text-red-400">*</span>
+              Title
             </label>
-            <input
-              className="w-full rounded-lg bg-card border border-border/60 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-              placeholder="Enter a descriptive title..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <div className="relative">
+              <input
+                className="w-full rounded-xl bg-white/5 backdrop-blur-md border border-white/20 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-400/40 focus:border-purple-400/60 focus:bg-white/10 transition-all duration-300 placeholder:text-white/40 text-base font-medium hover:border-white/30 hover:bg-white/8 text-white"
+                placeholder="Enter a descriptive title..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/10 to-blue-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            </div>
           </div>
           
-          <div>
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">
-              Summary *
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-white/90 block flex items-center gap-2">
+              <span className="text-red-400">*</span>
+              Summary
             </label>
-            <textarea
-              className="w-full rounded-lg bg-card border border-border/60 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none"
-              placeholder="Provide a brief summary of the content..."
-              rows={4}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-            />
+            <div className="relative">
+              <textarea
+                className="w-full rounded-xl bg-white/5 backdrop-blur-md border border-white/20 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-purple-400/40 focus:border-purple-400/60 focus:bg-white/10 transition-all duration-300 resize-none placeholder:text-white/40 text-base leading-relaxed hover:border-white/30 hover:bg-white/8 text-white"
+                placeholder="Provide a brief summary of the content..."
+                rows={4}
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+              />
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/10 to-blue-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+            </div>
           </div>
+
+          {/* Author field for blogs and courses */}
+          {(type === "blog" || type === "course") && (
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-white/90 block flex items-center gap-2">
+                <Users className="w-4 h-4 text-green-400" />
+                Author Name
+              </label>
+              <div className="relative">
+                <input
+                  className="w-full rounded-xl bg-white/5 backdrop-blur-md border border-white/20 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-green-400/40 focus:border-green-400/60 focus:bg-white/10 transition-all duration-300 placeholder:text-white/40 text-base font-medium hover:border-white/30 hover:bg-white/8 text-white"
+                  placeholder="Enter the author's name..."
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-green-500/10 to-blue-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              </div>
+            </div>
+          )}
 
           {/* URL field for blogs and courses */}
           {(type === "blog" || type === "course") && (
-            <div>
-              <label className="text-sm font-medium text-muted-foreground mb-2 block">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-white/90 block flex items-center gap-2">
+                <ExternalLink className="w-4 h-4 text-blue-400" />
                 Original Source URL (Optional)
               </label>
-              <input
-                className="w-full rounded-lg bg-card border border-border/60 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                placeholder="https://example.com/article"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="relative">
+                <input
+                  className="w-full rounded-xl bg-white/5 backdrop-blur-md border border-white/20 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-blue-400/40 focus:border-blue-400/60 focus:bg-white/10 transition-all duration-300 placeholder:text-white/40 text-base font-medium hover:border-white/30 hover:bg-white/8 text-white"
+                  placeholder="https://example.com/article"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+              </div>
+              <p className="text-xs text-white/50 flex items-center gap-1">
+                <span className="w-1 h-1 bg-white/30 rounded-full"></span>
                 Link to the original website where this content was published
               </p>
             </div>
@@ -1472,61 +1531,85 @@ function PublishButton() {
           
           {/* Video-specific fields */}
           {type === "video" && (
-            <div className="space-y-4 p-4 bg-muted/20 rounded-lg border border-border/30">
-              <h4 className="text-sm font-medium text-foreground">Video Details</h4>
+            <div className="space-y-6 p-6 bg-gradient-to-br from-red-500/5 to-pink-500/5 rounded-2xl border border-red-500/20 backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-pink-500 rounded-lg flex items-center justify-center">
+                  <Play className="w-4 h-4 text-white" />
+                </div>
+                <h4 className="text-lg font-semibold text-foreground">Video Details</h4>
+              </div>
               
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  YouTube URL *
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground block flex items-center gap-2">
+                  <span className="text-red-400">*</span>
+                  <span className="text-red-500">YouTube</span> URL
                 </label>
-                <input
-                  className="w-full rounded-lg bg-card border border-border/60 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  value={videoUrl}
-                  onChange={(e) => setVideoUrl(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    className="w-full rounded-xl bg-background/50 backdrop-blur-sm border border-border/40 px-4 py-4 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500/50 transition-all duration-300 placeholder:text-muted-foreground/50 text-base font-medium hover:border-border/60"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                  />
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-red-500/5 to-pink-500/5 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground block flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-400" />
                     Duration
                   </label>
-                  <input
-                    className="w-full rounded-lg bg-card border border-border/60 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                    placeholder="e.g., 10:30"
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                  />
+                  <div className="relative">
+                    <input
+                      className="w-full rounded-xl bg-background/50 backdrop-blur-sm border border-border/40 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/50 transition-all duration-300 placeholder:text-muted-foreground/50 text-base font-medium hover:border-border/60"
+                      placeholder="e.g., 10:30"
+                      value={duration}
+                      onChange={(e) => setDuration(e.target.value)}
+                    />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                  </div>
                 </div>
                 
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground block flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                      difficulty === "beginner" ? "bg-green-400" :
+                      difficulty === "intermediate" ? "bg-yellow-400" : "bg-red-400"
+                    }`}></span>
                     Difficulty
                   </label>
-                  <select
-                    className="w-full rounded-lg bg-card border border-border/60 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value as "beginner" | "intermediate" | "advanced")}
-                    aria-label="Select difficulty level"
-                  >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      className="w-full rounded-xl bg-background/50 backdrop-blur-sm border border-border/40 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/50 transition-all duration-300 text-base font-medium hover:border-border/60 appearance-none cursor-pointer"
+                      value={difficulty}
+                      onChange={(e) => setDifficulty(e.target.value as "beginner" | "intermediate" | "advanced")}
+                      aria-label="Select difficulty level"
+                    >
+                      <option value="beginner">🟢 Beginner</option>
+                      <option value="intermediate">🟡 Intermediate</option>
+                      <option value="advanced">🔴 Advanced</option>
+                    </select>
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/5 to-blue-500/5 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                  </div>
                 </div>
               </div>
               
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground block flex items-center gap-2">
+                  <span className="text-lg">🏷️</span>
                   Category
                 </label>
-                <input
-                  className="w-full rounded-lg bg-card border border-border/60 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  placeholder="e.g., Technical Analysis, Trading Strategy"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                />
+                <div className="relative">
+                  <input
+                    className="w-full rounded-xl bg-background/50 backdrop-blur-sm border border-border/40 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500/50 transition-all duration-300 placeholder:text-muted-foreground/50 text-base font-medium hover:border-border/60"
+                    placeholder="e.g., Technical Analysis, Trading Strategy"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  />
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/5 to-blue-500/5 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                </div>
               </div>
               
               <div>
@@ -1631,19 +1714,22 @@ function PublishButton() {
           )}
         </div>
         
-        <div className="flex-shrink-0 flex items-center justify-between pt-4 border-t border-border/30 bg-background">
-          <p className="text-xs text-muted-foreground">
-            * Required fields
-          </p>
+        <div className="flex-shrink-0 flex items-center justify-between pt-6 border-t border-white/10 bg-white/5 backdrop-blur-sm -m-6 mt-0 p-6 rounded-b-2xl">
+          <div className="flex items-center gap-2 text-xs text-white/60">
+            <span className="text-red-400">*</span>
+            <span>Required fields</span>
+          </div>
           <button
             disabled={!title || !summary || (type === "video" && !videoUrl) || (type === "video" && playlistMode === "new" && !newPlaylistTitle.trim())}
-            className="px-6 py-3 rounded-lg btn-gradient text-black font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95"
+            className="group relative overflow-hidden px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-purple-500/25 disabled:hover:scale-100 disabled:hover:shadow-none"
             onClick={() => {
               const newItem: Omit<LearnItem, 'id' | 'createdAt'> = {
                 type,
                 title,
                 summary,
-                author: user?.name || "Author",
+                author: (type === "blog" || type === "course") && author.trim() 
+                  ? author.trim() 
+                  : user?.name || "Author",
                 createdBy: user?.email || user?.name, // Track creator for deletion permissions
               };
               
@@ -1686,6 +1772,7 @@ function PublishButton() {
               setOpen(false);
               setTitle("");
               setSummary("");
+              setAuthor("");
               setVideoUrl("");
               setDuration("");
               setCategory("");
@@ -1698,7 +1785,11 @@ function PublishButton() {
               location.reload();
             }}
           >
-            Publish
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 group-hover:animate-pulse" />
+              <span>Publish</span>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"></div>
           </button>
         </div>
       </DialogContent>
