@@ -8,6 +8,8 @@ export default function Marketplace() {
   const [selectedFilter, setSelectedFilter] = useState<"all" | "free" | "paid">("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [visibleItems, setVisibleItems] = useState<Set<string>>(new Set());
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +73,79 @@ export default function Marketplace() {
       };
     }
   }, [isDropdownOpen]);
+
+  // Intersection Observer for fade animation on scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const itemId = entry.target.getAttribute('data-item-id');
+          if (itemId) {
+            setVisibleItems(prev => {
+              const newSet = new Set(prev);
+              if (entry.isIntersecting) {
+                newSet.add(itemId);
+              } else {
+                newSet.delete(itemId);
+              }
+              return newSet;
+            });
+          }
+        });
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '50px 0px'
+      }
+    );
+
+    // Observe all marketplace items
+    const itemElements = document.querySelectorAll('[data-item-id]');
+    itemElements.forEach(el => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [filteredItems]);
+
+  // Intersection Observer for top sections animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const sectionId = entry.target.getAttribute('data-section-id');
+          if (sectionId) {
+            setVisibleSections(prev => {
+              const newSet = new Set(prev);
+              if (entry.isIntersecting) {
+                newSet.add(sectionId);
+              } else {
+                newSet.delete(sectionId);
+              }
+              return newSet;
+            });
+          }
+        });
+      },
+      {
+        threshold: 0.2,
+        rootMargin: '20px 0px'
+      }
+    );
+
+    // Observe all top sections
+    const sectionElements = document.querySelectorAll('[data-section-id]');
+    sectionElements.forEach(el => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Initialize top sections as visible on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setVisibleSections(new Set(['header', 'search', 'filters', 'results']));
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
   
   const refreshMarketplace = () => {
     const newItems = repo.refreshMarketplace();
@@ -87,7 +162,14 @@ export default function Marketplace() {
     <div className="min-h-screen bg-[#121212] overflow-x-hidden">
       <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 relative">
         {/* Enhanced Header */}
-        <div className="text-center mb-6 sm:mb-8">
+        <div 
+          data-section-id="header"
+          className={`text-center mb-6 sm:mb-8 transition-all duration-1000 ${
+            visibleSections.has('header') 
+              ? 'opacity-100 translate-y-0' 
+              : 'opacity-0 -translate-y-8'
+          }`}
+        >
           <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] bg-clip-text text-transparent mb-3 sm:mb-4">
             Strategy Marketplace
           </h1>
@@ -96,7 +178,14 @@ export default function Marketplace() {
           </p>
 
         {/* Enhanced Search Bar */}
-        <div className="max-w-xl sm:max-w-2xl mx-auto mb-6 sm:mb-8 px-2 sm:px-0">
+        <div 
+          data-section-id="search"
+          className={`max-w-xl sm:max-w-2xl mx-auto mb-6 sm:mb-8 px-2 sm:px-0 transition-all duration-1000 delay-200 ${
+            visibleSections.has('search') 
+              ? 'opacity-100 translate-y-0' 
+              : 'opacity-0 translate-y-8'
+          }`}
+        >
           <div className="relative group">
             <div className="absolute -inset-0.5 sm:-inset-1 bg-gradient-to-r from-[#4A90E2] via-[#3A7BD5] to-[#4A90E2] rounded-2xl sm:rounded-3xl blur opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
             <div className="relative bg-[#202020] backdrop-blur-md border border-[#4A90E2]/30 rounded-xl sm:rounded-2xl shadow-2xl group-hover:shadow-[#4A90E2]/10 transition-all duration-300">
@@ -128,7 +217,14 @@ export default function Marketplace() {
       </div>
 
       {/* Filter Controls */}
-      <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8">
+      <div 
+        data-section-id="filters"
+        className={`container mx-auto max-w-7xl px-3 sm:px-4 lg:px-8 mb-6 sm:mb-8 transition-all duration-1000 delay-400 ${
+          visibleSections.has('filters') 
+            ? 'opacity-100 translate-y-0' 
+            : 'opacity-0 translate-y-8'
+        }`}
+      >
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
           {/* Category Filter */}
           <div className="w-full sm:flex-1 sm:mr-4">
@@ -295,7 +391,14 @@ export default function Marketplace() {
         </div>
         
         {/* Results Count */}
-        <div className="text-sm text-[#AFAFAF] mt-4">
+        <div 
+          data-section-id="results"
+          className={`text-sm text-[#AFAFAF] mt-4 transition-all duration-1000 delay-600 ${
+            visibleSections.has('results') 
+              ? 'opacity-100 translate-y-0' 
+              : 'opacity-0 translate-y-8'
+          }`}
+        >
           {filteredItems.length} strateg{filteredItems.length !== 1 ? 'ies' : 'y'} found
         </div>
         
@@ -378,10 +481,15 @@ export default function Marketplace() {
           {filteredItems.map((m) => (
             <div
               key={m.id}
-              className={`group relative backdrop-blur-xl bg-[#202020]/90 hover:bg-[#282828]/90 border border-[#4A90E2]/20 hover:border-[#4A90E2]/40 rounded-lg sm:rounded-xl lg:rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:shadow-lg sm:hover:shadow-xl hover:shadow-[#4A90E2]/20 ${
+              data-item-id={m.id}
+              className={`group relative backdrop-blur-xl bg-[#202020]/90 hover:bg-[#282828]/90 border border-[#4A90E2]/20 hover:border-[#4A90E2]/40 rounded-lg sm:rounded-xl lg:rounded-2xl overflow-hidden transition-all duration-700 hover:scale-[1.01] hover:shadow-lg sm:hover:shadow-xl hover:shadow-[#4A90E2]/20 ${
                 viewMode === 'list' 
                   ? 'flex flex-col md:flex-row items-start md:items-center gap-3 sm:gap-4 lg:gap-6 p-3 sm:p-4 lg:p-5' 
                   : 'p-3 sm:p-4 lg:p-5 h-full flex flex-col min-h-[280px] sm:min-h-[320px]'
+              } ${
+                visibleItems.has(m.id) 
+                  ? 'opacity-100 translate-y-0' 
+                  : 'opacity-0 translate-y-8'
               }`}
           >
             {/* Glass shine effect */}
