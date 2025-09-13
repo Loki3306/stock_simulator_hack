@@ -548,147 +548,7 @@ export default function Backtest() {
             />
           </div>
 
-          {/* Main Strategy Performance Chart */}
-          <div className="mt-8 rounded-xl border border-border/60 bg-card/60 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Strategy Performance Chart
-              </h2>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>Portfolio Value Over Time</span>
-                {transformedResult.trades.length > 0 && (
-                  <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">
-                    {transformedResult.trades.length} Trades Executed
-                  </span>
-                )}
-              </div>
-            </div>
-            
-            {/* Display Python plot HTML if available, otherwise use our chart */}
-            {backtestResults?.results?.plot_html && backtestResults.results.plot_html.trim().length > 0 ? (
-              <div 
-                dangerouslySetInnerHTML={{ __html: backtestResults.results.plot_html }}
-                className="w-full"
-              />
-            ) : equity && equity.length > 0 ? (
-              <div>
-                {/* Enhanced Performance Summary */}
-                <div className="mb-4 p-3 bg-black/20 rounded-lg border border-border/30">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Initial Value</span>
-                      <div className="font-medium">${equity[0]?.value.toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Final Value</span>
-                      <div className="font-medium">${equity[equity.length - 1]?.value.toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Total Gain</span>
-                      <div className={`font-medium ${(equity[equity.length - 1]?.value - equity[0]?.value) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        ${((equity[equity.length - 1]?.value - equity[0]?.value) || 0).toLocaleString()}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Data Points</span>
-                      <div className="font-medium">{equity.length}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Performance Chart with Enhanced Features */}
-                <div className="relative">
-                  {/* Trade markers overlay */}
-                  {transformedResult.trades.length > 0 && (
-                    <div className="absolute top-0 left-0 w-full z-10 pointer-events-none">
-                      <div className="relative h-80">
-                        {transformedResult.trades.slice(0, 20).map((trade: any, index: number) => {
-                          // Calculate position based on trade date
-                          const tradeDate = trade.date;
-                          const equityIndex = equity.findIndex((eq: any) => eq.date === tradeDate);
-                          if (equityIndex === -1) return null;
-                          
-                          const leftPercent = (equityIndex / (equity.length - 1)) * 100;
-                          const isBuy = trade.action?.toUpperCase() === 'BUY';
-                          
-                          return (
-                            <div
-                              key={index}
-                              className={`absolute w-2 h-2 rounded-full ${
-                                isBuy ? 'bg-green-400' : 'bg-red-400'
-                              } opacity-70 transform -translate-x-1/2`}
-                              style={{ 
-                                left: `${leftPercent}%`, 
-                                top: '50%',
-                                transform: 'translateX(-50%) translateY(-50%)'
-                              }}
-                              title={`${trade.action} ${trade.symbol || 'Stock'} on ${trade.date}`}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <ChartComponent type="area" data={equity} height={320} />
-                </div>
-
-                {/* Performance Insights */}
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-3 bg-black/20 rounded border border-border/30">
-                    <div className="text-xs text-muted-foreground mb-1">Volatility</div>
-                    <div className="font-medium">
-                      {(() => {
-                        if (equity.length < 2) return 'N/A';
-                        const returns = equity.slice(1).map((curr: any, i: number) => 
-                          (curr.value - equity[i].value) / equity[i].value
-                        );
-                        const avgReturn = returns.reduce((sum: number, r: number) => sum + r, 0) / returns.length;
-                        const variance = returns.reduce((sum: number, r: number) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length;
-                        const volatility = Math.sqrt(variance) * Math.sqrt(252) * 100; // Annualized
-                        return `${volatility.toFixed(1)}%`;
-                      })()}
-                    </div>
-                  </div>
-                  
-                  <div className="p-3 bg-black/20 rounded border border-border/30">
-                    <div className="text-xs text-muted-foreground mb-1">Best Day</div>
-                    <div className="font-medium text-green-400">
-                      {(() => {
-                        if (equity.length < 2) return 'N/A';
-                        const returns = equity.slice(1).map((curr: any, i: number) => 
-                          (curr.value - equity[i].value) / equity[i].value * 100
-                        );
-                        return `+${Math.max(...returns).toFixed(2)}%`;
-                      })()}
-                    </div>
-                  </div>
-                  
-                  <div className="p-3 bg-black/20 rounded border border-border/30">
-                    <div className="text-xs text-muted-foreground mb-1">Worst Day</div>
-                    <div className="font-medium text-red-400">
-                      {(() => {
-                        if (equity.length < 2) return 'N/A';
-                        const returns = equity.slice(1).map((curr: any, i: number) => 
-                          (curr.value - equity[i].value) / equity[i].value * 100
-                        );
-                        return `${Math.min(...returns).toFixed(2)}%`;
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="h-80 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No performance data available</p>
-                  <p className="text-xs mt-1">Strategy may not have executed properly</p>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Removed orphaned divs and closing tags from deleted chart section */}
 
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 rounded-xl border border-border/60 bg-card/60 p-5">
@@ -704,32 +564,38 @@ export default function Backtest() {
               {equity && equity.length > 0 ? (
                 <div>
                   {(() => {
-                    // Calculate monthly returns
-                    const monthlyReturns = (() => {
-                      const monthlyData = new Map();
-                      
-                      equity.forEach((point: any) => {
-                        const date = new Date(point.date);
-                        const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                        
-                        if (!monthlyData.has(monthKey)) {
-                          monthlyData.set(monthKey, { start: point.value, end: point.value, dates: [point.date] });
-                        } else {
-                          const existing = monthlyData.get(monthKey);
-                          existing.end = point.value;
-                          existing.dates.push(point.date);
-                        }
+                    // Monthly returns from trade history
+                    const getAllMonths = (trades) => {
+                      if (!trades || trades.length === 0) return [];
+                      const months = new Set();
+                      trades.forEach((trade) => {
+                        const monthKey = trade.date.slice(0, 7); // YYYY-MM
+                        months.add(monthKey);
                       });
-                      
-                      return Array.from(monthlyData.entries()).map(([month, data]) => {
-                        const returnPct = ((data.end - data.start) / data.start) * 100;
-                        return {
-                          month,
-                          return: returnPct,
-                          value: returnPct
-                        };
-                      }).sort((a, b) => a.month.localeCompare(b.month));
-                    })();
+                      const sorted = Array.from(months).sort();
+                      if (sorted.length === 0) return [];
+                      const start = String(sorted[0]);
+                      const end = String(sorted[sorted.length - 1]);
+                      const result = [];
+                      let [year, month] = start.split('-').map(Number);
+                      const [endYear, endMonth] = end.split('-').map(Number);
+                      while (year < endYear || (year === endYear && month <= endMonth)) {
+                        result.push(`${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}`);
+                        month++;
+                        if (month > 12) {
+                          month = 1;
+                          year++;
+                        }
+                      }
+                      return result;
+                    };
+
+                    const allMonths = getAllMonths(transformedResult.trades);
+                    const monthlyReturns = allMonths.map(month => {
+                      const tradesInMonth = transformedResult.trades.filter(trade => trade.date.slice(0, 7) === month);
+                      const value = tradesInMonth.reduce((sum, trade) => sum + trade.pnl, 0);
+                      return { month, return: value, value };
+                    });
 
                     if (monthlyReturns.length === 0) {
                       return (
@@ -743,7 +609,7 @@ export default function Backtest() {
                       <div>
                         {/* Monthly Returns Chart */}
                         <ChartComponent 
-                          type="line" 
+                          type="bar" 
                           data={monthlyReturns.map(m => ({ date: m.month, value: m.return }))} 
                           height={240} 
                         />
@@ -811,29 +677,20 @@ export default function Backtest() {
                   Risk Analysis
                 </div>
               </div>
-              {drawdown && drawdown.length > 0 ? (
-                <div>
-                  <div className="mb-2 text-sm text-muted-foreground">
-                    Max DD: {Math.min(...drawdown.map(d => d.value)).toFixed(2)}% • Current: {drawdown[drawdown.length - 1]?.value.toFixed(2)}%
-                  </div>
-                  <ChartComponent
-                    type="line"
-                    data={drawdown.map((d: any) => ({
-                      date: d.date,
-                      value: d.value,
-                    }))}
-                    height={280}
-                  />
+              {/* Drawdown chart based on quick stats */}
+              <div>
+                <div className="mb-2 text-sm text-muted-foreground">
+                  Max DD: {transformedResult?.kpis?.maxDrawdown || '0.00'}% • Current: {transformedResult?.kpis?.currentDrawdown || '0.00'}%
                 </div>
-              ) : (
-                <div className="h-280 flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No drawdown data available</p>
-                    <p className="text-xs mt-1">Unable to calculate risk metrics</p>
-                  </div>
-                </div>
-              )}
+                <ChartComponent
+                  type="line"
+                  data={[
+                    { date: '2024-01-01', value: -parseFloat(transformedResult?.kpis?.maxDrawdown || '0') },
+                    { date: '2024-12-31', value: -parseFloat(transformedResult?.kpis?.maxDrawdown || '0') }
+                  ]}
+                  height={280}
+                />
+              </div>
             </div>
           </div>
 
