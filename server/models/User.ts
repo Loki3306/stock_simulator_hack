@@ -19,6 +19,7 @@ export interface UserDoc {
     theme: "dark" | "light";
   };
   refreshTokens: RefreshTokenEntry[];
+  googleId?: string;
 }
 
 const RefreshTokenSchema = new Schema<RefreshTokenEntry>({

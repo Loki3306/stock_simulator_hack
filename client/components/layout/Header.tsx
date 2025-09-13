@@ -57,15 +57,24 @@ export default function Header() {
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 {user.name}
               </span>
+              <Link
+                to="/profile"
+                className="text-sm text-muted-foreground hover:text-white"
+              >
+                Profile
+              </Link>
               <button
                 onClick={logout}
                 className="text-sm text-muted-foreground hover:text-white"
               >
                 Logout
               </button>
-              <div className="h-9 w-9 rounded-full bg-card/60 border border-border/60 grid place-items-center">
+              <Link
+                to="/profile"
+                className="h-9 w-9 rounded-full bg-card/60 border border-border/60 grid place-items-center hover:bg-card/80"
+              >
                 <User className="h-5 w-5" />
-              </div>
+              </Link>
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -120,6 +129,15 @@ export default function Header() {
             >
               Start Building
             </Link>
+            {user && (
+              <Link
+                to="/profile"
+                className="px-3 py-2 rounded-md text-muted-foreground hover:bg-white/5 hover:text-white"
+                onClick={() => setOpen(false)}
+              >
+                Profile
+              </Link>
+            )}
             {!user && (
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <button
