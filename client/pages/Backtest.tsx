@@ -796,21 +796,6 @@ export default function Backtest() {
                 </div>
               )}
             </div>
-                  <div className="mb-2 text-sm text-muted-foreground">
-                    {equity.length} data points • Initial: ${equity[0]?.value.toLocaleString()} • Final: ${equity[equity.length - 1]?.value.toLocaleString()}
-                  </div>
-                  <ChartComponent type="area" data={equity} height={280} />
-                </div>
-              ) : (
-                <div className="h-280 flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No equity curve data available</p>
-                    <p className="text-xs mt-1">Strategy may not have executed any trades</p>
-                  </div>
-                </div>
-              )}
-            </div>
             <div className="rounded-xl border border-border/60 bg-card/60 p-5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display flex items-center gap-2">
