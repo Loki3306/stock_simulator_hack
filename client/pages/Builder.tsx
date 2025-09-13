@@ -79,7 +79,21 @@ export default function Builder() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-[1400px] mx-auto">
-      <div className="flex items-center gap-3">
+      {/* Top action buttons row with spacing */}
+      <div className="flex flex-wrap items-center gap-4 py-2 mb-2">
+        <button className="bg-green-500 text-white px-4 py-2 rounded">Add Test Node</button>
+        <button className="bg-purple-500 text-white px-4 py-2 rounded">Backtest</button>
+        <button className="bg-gray-700 text-white px-4 py-2 rounded">Export</button>
+        <button className="bg-blue-500 text-white px-4 py-2 rounded">Import</button>
+        <button className="bg-purple-400 text-white px-4 py-2 rounded">Load Template</button>
+        <button className="bg-green-600 text-white px-4 py-2 rounded">Load Working Strategy</button>
+        <button className="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
+        <button className="bg-red-600 text-white px-4 py-2 rounded">Clear</button>
+        <button className="bg-blue-400 text-white px-4 py-2 rounded">Hide Analytics</button>
+      </div>
+
+      {/* Title and Save button row */}
+      <div className="flex items-center gap-3 mb-4">
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
