@@ -110,7 +110,7 @@ export default function Marketplace() {
           <div className="flex flex-wrap items-center gap-2 md:gap-4 bg-[#202020]/80 backdrop-blur-sm border border-[#4A90E2]/30 rounded-2xl p-2 w-full xl:w-auto">
             <button
               onClick={() => setSelectedCategory("all")}
-              className={`relative flex items-center gap-2 px-3 md:px-5 py-2 md:py-3 rounded-xl font-medium transition-all text-xs md:text-sm text-[#F0F0F0] group ${
+              className={`relative flex items-center gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-medium transition-all text-xs md:text-sm text-[#F0F0F0] group ${
                 selectedCategory === "all" ? "" : ""
               }`}
             >
@@ -127,7 +127,7 @@ export default function Marketplace() {
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`relative flex items-center gap-2 px-3 md:px-5 py-2 md:py-3 rounded-xl font-medium transition-all text-xs md:text-sm text-[#F0F0F0] group ${
+                className={`relative flex items-center gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg font-medium transition-all text-xs md:text-sm text-[#F0F0F0] group ${
                   selectedCategory === category ? "" : ""
                 }`}
               >
@@ -147,11 +147,11 @@ export default function Marketplace() {
           <div className="flex flex-wrap items-center gap-2 bg-[#202020]/80 backdrop-blur-sm border border-[#4A90E2]/30 rounded-2xl p-1 w-full xl:w-auto">
             <button
               onClick={() => setSelectedFilter("all")}
-              className={`relative flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl font-medium transition-all text-xs md:text-base text-[#F0F0F0] group ${
+              className={`relative flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-lg font-medium transition-all text-xs md:text-sm text-[#F0F0F0] group ${
                 selectedFilter === "all" ? "" : ""
               }`}
             >
-              <Sparkles className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+              <Sparkles className="w-3 h-3 md:w-4 md:h-4 group-hover:scale-110 transition-transform duration-300" />
               <span className="relative group-hover:scale-110 transition-transform duration-300">
                 All
                 <span className={`absolute bottom-0 left-0 h-0.5 bg-[#4A90E2] transition-all duration-500 ease-out ${
@@ -269,27 +269,27 @@ export default function Marketplace() {
       
       
       {/* Marketplace Items */}
-      <div className={`${viewMode === 'grid' ? 'grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-4'}`}>
+      <div className={`${viewMode === 'grid' ? 'grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-4'}`}>
         {filteredItems.map((m) => (
           <div
             key={m.id}
-            className={`group relative backdrop-blur-xl bg-[#202020] hover:bg-[#282828] border border-[#4A90E2]/20 hover:border-[#4A90E2]/40 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-[#4A90E2]/10 ${
-              viewMode === 'list' ? 'flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-4 sm:p-5' : 'p-4 sm:p-5'
+            className={`group relative backdrop-blur-xl bg-[#202020]/90 hover:bg-[#282828]/90 border border-[#4A90E2]/20 hover:border-[#4A90E2]/40 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-[#4A90E2]/20 ${
+              viewMode === 'list' ? 'flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-6 p-5 lg:p-6' : 'p-5 h-full flex flex-col'
             }`}
           >
             {/* Glass shine effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#4A90E2]/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             
-            <div className={`relative z-10 ${viewMode === 'list' ? 'flex-1' : ''}`}>
+            <div className={`relative z-10 ${viewMode === 'list' ? 'flex-1' : 'flex flex-col h-full'}`}>
               {/* Header Section */}
               <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#4A90E2]/20 to-[#3A7BD5]/20 border border-[#4A90E2]/30 backdrop-blur-sm">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-[#4A90E2]/20 to-[#3A7BD5]/20 border border-[#4A90E2]/30 backdrop-blur-sm shrink-0">
                       <TrendingUp className="w-5 h-5 text-[#4A90E2]" />
                     </div>
-                    <div>
-                      <h3 className="font-bold text-lg text-[#F0F0F0] group-hover:text-white transition-colors duration-300">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-lg text-[#F0F0F0] group-hover:text-white transition-colors duration-300 line-clamp-2">
                         {m.title}
                       </h3>
                       <p className="text-sm text-[#AFAFAF]">Trading Strategy</p>
@@ -298,7 +298,7 @@ export default function Marketplace() {
                 </div>
                 
                 {/* Price Badge */}
-                <div className={`px-4 py-2 rounded-xl border font-bold text-sm backdrop-blur-sm ${
+                <div className={`px-3 py-2 rounded-xl border font-bold text-xs sm:text-sm backdrop-blur-sm shrink-0 ml-3 ${
                   m.price ? 
                     'bg-gradient-to-r from-[#4A90E2]/20 to-[#4A90E2]/30 border-[#4A90E2]/40 text-[#4A90E2]' :
                     'bg-gradient-to-r from-[#28a745]/20 to-[#28a745]/30 border-[#28a745]/40 text-[#28a745]'
@@ -308,43 +308,45 @@ export default function Marketplace() {
               </div>
 
               {/* Metrics Section */}
-              <div className="flex items-center justify-between mb-5 p-4 rounded-xl bg-[#121212]/60 border border-[#4A90E2]/20 backdrop-blur-sm">
-                <div className="flex items-center gap-2">
-                  <Star className="w-4 h-4 text-[#28a745] fill-current" />
-                  <span className="font-bold text-[#F0F0F0]">{m.rating.toFixed(1)}</span>
-                  <span className="text-xs text-[#AFAFAF]">rating</span>
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5 p-3 sm:p-4 rounded-xl bg-[#121212]/60 border border-[#4A90E2]/20 backdrop-blur-sm">
+                <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+                  <Star className="w-4 h-4 text-[#28a745] fill-current shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-bold text-sm sm:text-base text-[#F0F0F0] block">{m.rating.toFixed(1)}</span>
+                    <span className="text-xs text-[#AFAFAF] hidden sm:inline">rating</span>
+                  </div>
                 </div>
                 
-                <div className="w-px h-5 bg-[#AFAFAF]/30" />
-                
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-[#4A90E2]" />
-                  <span className="font-bold text-[#28a745]">85%</span>
-                  <span className="text-xs text-[#AFAFAF]">success</span>
+                <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+                  <BarChart3 className="w-4 h-4 text-[#4A90E2] shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-bold text-sm sm:text-base text-[#28a745] block">85%</span>
+                    <span className="text-xs text-[#AFAFAF] hidden sm:inline">success</span>
+                  </div>
                 </div>
                 
-                <div className="w-px h-5 bg-[#AFAFAF]/30" />
-                
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#4A90E2]" />
-                  <span className="font-bold text-[#F0F0F0]">{Math.floor(Math.random() * 1000) + 100}</span>
-                  <span className="text-xs text-[#AFAFAF]">users</span>
+                <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 text-center sm:text-left">
+                  <Users className="w-4 h-4 text-[#4A90E2] shrink-0" />
+                  <div className="min-w-0">
+                    <span className="font-bold text-sm sm:text-base text-[#F0F0F0] block">{Math.floor(Math.random() * 1000) + 100}</span>
+                    <span className="text-xs text-[#AFAFAF] hidden sm:inline">users</span>
+                  </div>
                 </div>
               </div>
 
               {/* Tags Section */}
               {m.tags && m.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-5">
+                <div className={`flex flex-wrap gap-2 ${viewMode === 'grid' ? 'mb-auto pb-5' : 'mb-5'}`}>
                   {m.tags.slice(0, 3).map((tag, index) => (
                     <span
                       key={index}
-                      className="px-3 py-1.5 rounded-lg bg-[#121212]/60 border border-[#4A90E2]/30 text-xs font-medium text-[#4A90E2] hover:text-white hover:bg-[#4A90E2]/20 hover:border-[#4A90E2]/50 transition-all duration-200 backdrop-blur-sm"
+                      className="px-2.5 py-1 rounded-lg bg-[#121212]/60 border border-[#4A90E2]/30 text-xs font-medium text-[#4A90E2] hover:text-white hover:bg-[#4A90E2]/20 hover:border-[#4A90E2]/50 transition-all duration-200 backdrop-blur-sm"
                     >
                       #{tag}
                     </span>
                   ))}
                   {m.tags.length > 3 && (
-                    <span className="px-3 py-1.5 rounded-lg bg-[#121212]/40 border border-[#AFAFAF]/30 text-xs text-[#AFAFAF] backdrop-blur-sm">
+                    <span className="px-2.5 py-1 rounded-lg bg-[#121212]/40 border border-[#AFAFAF]/30 text-xs text-[#AFAFAF] backdrop-blur-sm">
                       +{m.tags.length - 3} more
                     </span>
                   )}
@@ -352,7 +354,7 @@ export default function Marketplace() {
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className={`flex flex-col sm:flex-row gap-3 ${viewMode === 'grid' ? 'mt-auto' : ''}`}>
                 <button
                   onClick={() => {
                     const importedStrategy = repo.importMarket(m.id);
@@ -363,25 +365,25 @@ export default function Marketplace() {
                       alert('Failed to import strategy');
                     }
                   }}
-                  className="group/btn flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-[#4A90E2] hover:bg-[#3A7BD5] text-white font-bold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-[#4A90E2]/30 border border-[#4A90E2]/50 hover:border-[#3A7BD5]/70 relative overflow-hidden"
+                  className="group/btn flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[#4A90E2] hover:bg-[#3A7BD5] text-white font-medium text-xs transition-all duration-300 transform hover:scale-105 hover:shadow-md hover:shadow-[#4A90E2]/30 border border-[#4A90E2]/50 hover:border-[#3A7BD5]/70 relative overflow-hidden"
                 >
                   {/* Subtle shine effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700 ease-out" />
                   
                   {/* Content */}
-                  <Download className="w-4 h-4 group-hover/btn:scale-110 transition-all duration-200 relative z-10" />
-                  <span className="relative z-10 tracking-wide">Import Strategy</span>
+                  <Download className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-all duration-200 relative z-10" />
+                  <span className="relative z-10 tracking-wide">Import</span>
                 </button>
                 
                 <a
                   href="/backtest/mock"
-                  className="group/btn flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-transparent border-2 border-[#4A90E2]/60 hover:border-[#4A90E2]/80 hover:bg-[#4A90E2]/10 text-[#F0F0F0] hover:text-white font-semibold transition-all duration-300 transform hover:scale-105 backdrop-blur-sm relative overflow-hidden"
+                  className="group/btn flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-transparent border border-[#4A90E2]/60 hover:border-[#4A90E2]/80 hover:bg-[#4A90E2]/10 text-[#F0F0F0] hover:text-white font-medium text-xs transition-all duration-300 transform hover:scale-105 backdrop-blur-sm relative overflow-hidden flex-1 sm:flex-initial"
                 >
                   {/* Subtle glow on hover */}
                   <div className="absolute inset-0 bg-gradient-to-br from-[#4A90E2]/5 to-[#4A90E2]/10 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300" />
                   
                   {/* Content */}
-                  <Eye className="w-4 h-4 group-hover/btn:scale-110 transition-all duration-200 relative z-10 text-[#4A90E2]" />
+                  <Eye className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-all duration-200 relative z-10 text-[#4A90E2]" />
                   <span className="relative z-10 tracking-wide">Preview</span>
                 </a>
               </div>
