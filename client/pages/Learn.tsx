@@ -539,6 +539,7 @@ function LearnCard({ item, onDelete, viewMode }: { item: LearnItem; onDelete: (i
   );
 }
 
+
 // Main Learn Component
 export default function Learn() {
   const [filter, setFilter] = useState<"all" | "blog" | "course" | "video">("all");
@@ -782,15 +783,13 @@ export default function Learn() {
           <div className="text-sm text-[#AFAFAF]">
             {items.length} learning resource{items.length !== 1 ? 's' : ''} found
           </div>
-          {user && (
-            <PublishButton />
-          )}
+          <PublishButton />
         </div>
       </div>
       
       {/* Learning Resources */}
       {filter === "video" ? (
-        <VideoPlaylistsSection onDelete={handleDelete} searchQuery={searchQuery} viewMode={viewMode} />
+        <VideoSection onDelete={handleDelete} searchQuery={searchQuery} viewMode={viewMode} />
       ) : items.length > 0 ? (
         <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-8 pb-16">
           <div className={`grid gap-4 sm:gap-6 lg:gap-8 ${
@@ -852,9 +851,7 @@ export default function Learn() {
                   <span>Clear Search</span>
                 </button>
               )}
-              {user && (
-                <PublishButton />
-              )}
+              <PublishButton />
             </div>
           </div>
         </div>
@@ -863,9 +860,74 @@ export default function Learn() {
   );
 }
 
-// NOTE: VideoPlaylistsSection and PublishButton components would be added here
-// They are referenced but need to be implemented separately or imported from the original file
+// Video Section - Shows both individual videos and playlists
+function VideoSection({ onDelete, searchQuery, viewMode }: { onDelete: (id: string) => void; searchQuery: string; viewMode: "grid" | "list" }) {
+  const allVideos = useMemo(() => learnRepo.list("video"), []);
+  const allPlaylists = useMemo(() => learnRepo.list("playlist"), []);
+  
+  const allVideoContent = useMemo(() => {
+    return [...allVideos, ...allPlaylists];
+  }, [allVideos, allPlaylists]);
+  
+  const filteredVideoContent = useMemo(() => {
+    if (!searchQuery.trim()) return allVideoContent;
+    
+    return allVideoContent.filter(item =>
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.summary?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [allVideoContent, searchQuery]);
 
+  if (filteredVideoContent.length === 0) {
+    return (
+      <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-8 pb-16">
+        <div className="text-center py-16 lg:py-24 relative">
+          <div className="relative inline-block mb-8">
+            <div className="text-6xl lg:text-8xl mb-6 animate-pulse">🎥</div>
+            <div className="absolute -inset-8 bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-pink-500/10 rounded-full blur-3xl opacity-50"></div>
+          </div>
+          
+          <h3 className="text-2xl lg:text-3xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            {searchQuery ? `No videos found for "${searchQuery}"` : "No videos available"}
+          </h3>
+          
+          <p className="text-[#AFAFAF] text-base lg:text-lg mb-8 leading-relaxed max-w-lg mx-auto">
+            {searchQuery 
+              ? "Try adjusting your search terms or browse all available content."
+              : "No videos are available yet. Upload your first video!"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-8 pb-16">
+      <div className={`grid gap-4 sm:gap-6 lg:gap-8 ${
+        viewMode === "grid" 
+          ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+          : "grid-cols-1"
+      }`}>
+        {filteredVideoContent.map((item, index) => {
+          const delay = Math.min(index * 100, 500);
+          return (
+            <div
+              key={item.id}
+              className={`transition-all duration-700 opacity-100 translate-y-0 ${delay === 0 ? '' : delay === 100 ? 'delay-100' : delay === 200 ? 'delay-200' : delay === 300 ? 'delay-300' : delay === 400 ? 'delay-400' : 'delay-500'}`}
+              data-item-id={item.id}
+            >
+              <LearnCard item={item} onDelete={onDelete} viewMode={viewMode} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Original VideoPlaylistsSection - kept for backward compatibility
 function VideoPlaylistsSection({ onDelete, searchQuery, viewMode }: { onDelete: (id: string) => void; searchQuery: string; viewMode: "grid" | "list" }) {
   const allPlaylists = useMemo(() => learnRepo.list("playlist"), []);
   
@@ -929,56 +991,123 @@ function VideoPlaylistsSection({ onDelete, searchQuery, viewMode }: { onDelete: 
 
 function PublishButton() {
   const [showPublishDialog, setShowPublishDialog] = useState(false);
-  const [contentType, setContentType] = useState<"video" | "blog" | "course" | "playlist">("video");
+  const [contentType, setContentType] = useState<"video" | "article" | "course">("video");
   const [formData, setFormData] = useState({
     title: "",
     author: "",
-    summary: "",
-    videoUrl: "",
-    duration: "",
-    category: "",
-    difficulty: "beginner" as "beginner" | "intermediate" | "advanced",
-    content: ""
+    description: "",
+    url: "",
+    level: "beginner" as "beginner" | "intermediate" | "advanced",
+    addToPlaylist: false,
+    playlistOption: "new" as "new" | "existing",
+    playlistName: "",
+    existingPlaylistId: ""
   });
 
+  const existingPlaylists = learnRepo.list().filter(item => item.type === 'playlist');
+
   const handlePublish = () => {
-    if (!formData.title || !formData.author || !formData.summary) {
-      alert("Please fill in all required fields");
-      return;
+    // Validation based on content type
+    if (contentType === "article") {
+      if (!formData.title || !formData.author || !formData.url || !formData.description) {
+        alert("Please fill in all required fields for article: Title, Author, URL, and Description");
+        return;
+      }
+    } else if (contentType === "video") {
+      if (!formData.title || !formData.description || !formData.url || !formData.level) {
+        alert("Please fill in all required fields for video: Title, Description, Link, and Level");
+        return;
+      }
+    } else if (contentType === "course") {
+      if (!formData.title || !formData.author || !formData.url || !formData.description) {
+        alert("Please fill in all required fields for course: Title, Author, URL, and Description");
+        return;
+      }
     }
 
-    const newItem: LearnItem = {
-      id: Math.random().toString(36).slice(2, 9),
-      type: contentType,
-      title: formData.title,
-      author: formData.author,
-      summary: formData.summary,
-      category: formData.category || "General",
-      difficulty: formData.difficulty,
-      createdAt: Date.now(),
-      createdBy: "user@example.com", // This would come from auth context
-      ...(contentType === "video" && formData.videoUrl && { 
-        videoUrl: formData.videoUrl,
-        duration: formData.duration 
-      }),
-      ...(["blog", "course"].includes(contentType) && formData.content && { 
-        content: formData.content 
-      })
-    };
+    if (contentType === "article") {
+      const newArticle: LearnItem = {
+        id: Math.random().toString(36).slice(2, 9),
+        type: "blog",
+        title: formData.title,
+        author: formData.author,
+        summary: formData.description,
+        category: "User Generated",
+        difficulty: "intermediate",
+        createdAt: Date.now(),
+        createdBy: "user@example.com",
+        url: formData.url
+      };
+      learnRepo.create(newArticle);
 
-    learnRepo.create(newItem);
+    } else if (contentType === "video") {
+      const newVideo: LearnItem = {
+        id: Math.random().toString(36).slice(2, 9),
+        type: "video",
+        title: formData.title,
+        author: "User",
+        summary: formData.description,
+        category: "User Generated",
+        difficulty: formData.level,
+        createdAt: Date.now(),
+        createdBy: "user@example.com",
+        videoUrl: formData.url,
+        duration: "N/A"
+      };
+
+      learnRepo.create(newVideo);
+
+      // Handle playlist addition for videos
+      if (formData.addToPlaylist) {
+        if (formData.playlistOption === "new" && formData.playlistName) {
+          // Create new playlist with this video
+          const newPlaylist: LearnItem = {
+            id: Math.random().toString(36).slice(2, 9),
+            type: "playlist",
+            title: formData.playlistName,
+            author: "User",
+            summary: `Playlist containing ${formData.title}`,
+            category: "User Generated",
+            difficulty: formData.level,
+            createdAt: Date.now(),
+            createdBy: "user@example.com",
+            videos: [newVideo.id]
+          };
+          learnRepo.create(newPlaylist);
+        } else if (formData.playlistOption === "existing" && formData.existingPlaylistId) {
+          // Add to existing playlist (this would require playlist update functionality)
+          console.log("Would add to existing playlist:", formData.existingPlaylistId);
+        }
+      }
+
+    } else if (contentType === "course") {
+      const newCourse: LearnItem = {
+        id: Math.random().toString(36).slice(2, 9),
+        type: "course",
+        title: formData.title,
+        author: formData.author,
+        summary: formData.description,
+        category: "User Generated",
+        difficulty: "intermediate",
+        createdAt: Date.now(),
+        createdBy: "user@example.com",
+        url: formData.url
+      };
+      learnRepo.create(newCourse);
+    }
+
     setShowPublishDialog(false);
     setFormData({
       title: "",
       author: "",
-      summary: "",
-      videoUrl: "",
-      duration: "",
-      category: "",
-      difficulty: "beginner",
-      content: ""
+      description: "",
+      url: "",
+      level: "beginner",
+      addToPlaylist: false,
+      playlistOption: "new",
+      playlistName: "",
+      existingPlaylistId: ""
     });
-    // Refresh the page or trigger a re-render
     window.location.reload();
   };
 
@@ -986,141 +1115,363 @@ function PublishButton() {
     <>
       <button 
         onClick={() => setShowPublishDialog(true)}
-        className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-xl lg:rounded-2xl bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] hover:from-[#4A90E2]/80 hover:to-[#3A7BD5]/80 text-white font-medium transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-[#4A90E2]/30 hover:border-[#4A90E2]/50 text-sm sm:text-base"
+        className="group relative flex items-center gap-2 px-5 sm:px-7 py-2.5 sm:py-3.5 rounded-2xl bg-gradient-to-r from-[#4A90E2]/90 via-[#5B9BD5]/90 to-[#3A7BD5]/90 hover:from-[#4A90E2] hover:via-[#5B9BD5] hover:to-[#3A7BD5] text-white font-semibold transition-all duration-500 transform hover:scale-[1.02] backdrop-blur-xl border border-white/20 hover:border-white/30 text-sm sm:text-base shadow-2xl hover:shadow-[0_20px_50px_rgba(74,144,226,0.4)] overflow-hidden"
       >
-        <Sparkles className="w-4 h-4" />
-        <span>Publish Content</span>
+        {/* Glass effect overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+        
+        {/* Animated background shimmer */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-[#4A90E2] via-[#7B68EE] to-[#3A7BD5] rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity duration-300 animate-pulse" />
+        
+        <div className="relative flex items-center gap-2">
+          <Sparkles className="w-4 h-4 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" />
+          <span className="bg-gradient-to-r from-white to-white/90 bg-clip-text">Publish Content</span>
+        </div>
       </button>
 
       <Dialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Publish New Content</DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-gradient-to-br from-[#1A1A1A]/95 via-[#1E1E1E]/90 to-[#1A1A1A]/95 backdrop-blur-2xl border border-white/10 text-white shadow-2xl rounded-3xl">
+          {/* Glass effect overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-3xl pointer-events-none" />
+          
+          <DialogHeader className="relative">
+            <DialogTitle className="text-2xl font-bold text-transparent bg-gradient-to-r from-[#4A90E2] via-[#7B68EE] to-[#3A7BD5] bg-clip-text flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-[#4A90E2]" />
+              Publish New Content
+            </DialogTitle>
           </DialogHeader>
+          
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">Content Type</label>
-              <select 
-                value={contentType} 
-                onChange={(e) => setContentType(e.target.value as typeof contentType)}
-                className="w-full p-2 border rounded-lg bg-background"
-                title="Select content type"
-              >
-                <option value="video">Video</option>
-                <option value="blog">Blog Post</option>
-                <option value="course">Course</option>
-                <option value="playlist">Playlist</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Title *</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full p-2 border rounded-lg bg-background"
-                  placeholder="Enter content title"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Author *</label>
-                <input
-                  type="text"
-                  value={formData.author}
-                  onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
-                  className="w-full p-2 border rounded-lg bg-background"
-                  placeholder="Author name"
-                />
+            {/* Content Type Selection */}
+            <div className="relative">
+              <label className="block text-sm font-semibold mb-4 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Content Type</label>
+              <div className="flex justify-center gap-8">
+                {(["video", "article", "course"] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setContentType(type)}
+                    className={`group relative px-6 py-3 capitalize font-semibold text-base transition-all duration-300 ${
+                      contentType === type
+                        ? 'text-[#4A90E2]'
+                        : 'text-[#AFAFAF] hover:text-white'
+                    }`}
+                  >
+                    <span className="relative z-10">{type}</span>
+                    
+                    {/* Underline effect */}
+                    <div className={`absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] transition-all duration-300 ${
+                      contentType === type ? 'w-full' : 'w-0 group-hover:w-full'
+                    }`} />
+                    
+                    {/* Glow effect for active */}
+                    {contentType === type && (
+                      <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] blur-sm opacity-60" />
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2">Summary *</label>
-              <textarea
-                value={formData.summary}
-                onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
-                className="w-full p-2 border rounded-lg bg-background h-20"
-                placeholder="Brief description of the content"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Category</label>
-                <input
-                  type="text"
-                  value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full p-2 border rounded-lg bg-background"
-                  placeholder="e.g., Technical Analysis"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Difficulty</label>
-                <select 
-                  value={formData.difficulty} 
-                  onChange={(e) => setFormData(prev => ({ ...prev, difficulty: e.target.value as typeof formData.difficulty }))}
-                  className="w-full p-2 border rounded-lg bg-background"
-                  title="Select difficulty level"
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </div>
-            </div>
-
-            {contentType === "video" && (
-              <div className="grid grid-cols-2 gap-4">
+            {/* Article Form */}
+            {contentType === "article" && (
+              <div className="space-y-6 p-6 rounded-2xl bg-gradient-to-br from-[#2A2A2A]/60 to-[#1A1A1A]/60 backdrop-blur-xl border border-[#4A90E2]/20 shadow-xl">
+                {/* Article Form Header */}
+                <div className="flex items-center gap-3 mb-6 p-3 rounded-xl bg-gradient-to-r from-[#4A90E2]/10 to-[#3A7BD5]/10 border border-[#4A90E2]/20">
+                  <div className="w-3 h-3 bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] rounded-full shadow-lg"></div>
+                  <span className="text-lg font-bold text-transparent bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] bg-clip-text">📄 Article Information</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Title *</label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner"
+                      placeholder="Enter article title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Author *</label>
+                    <input
+                      type="text"
+                      value={formData.author}
+                      onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                      className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner"
+                      placeholder="Author name"
+                    />
+                  </div>
+                </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Video URL</label>
+                  <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">URL *</label>
                   <input
                     type="url"
-                    value={formData.videoUrl}
-                    onChange={(e) => setFormData(prev => ({ ...prev, videoUrl: e.target.value }))}
-                    className="w-full p-2 border rounded-lg bg-background"
+                    value={formData.url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                    className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner"
+                    placeholder="https://example.com/article"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Description *</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner h-28 resize-none"
+                    placeholder="Brief description of the article"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Video Form */}
+            {contentType === "video" && (
+              <div className="space-y-6 p-6 rounded-2xl bg-gradient-to-br from-[#2A2A2A]/60 to-[#1A1A1A]/60 backdrop-blur-xl border border-[#4A90E2]/20 shadow-xl">
+                {/* Video Form Header */}
+                <div className="flex items-center gap-3 mb-6 p-3 rounded-xl bg-gradient-to-r from-[#4A90E2]/10 to-[#3A7BD5]/10 border border-[#4A90E2]/20">
+                  <div className="w-3 h-3 bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] rounded-full shadow-lg"></div>
+                  <span className="text-lg font-bold text-transparent bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] bg-clip-text">🎥 Video Information</span>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Video Name *</label>
+                  <input
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner"
+                    placeholder="Enter video name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Description *</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner h-28 resize-none"
+                    placeholder="Brief description of the video"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Video Link *</label>
+                  <input
+                    type="url"
+                    value={formData.url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                    className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner"
                     placeholder="https://youtube.com/watch?v=..."
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2">Duration</label>
+                  <label className="block text-sm font-medium mb-2 text-[#F0F0F0]">Level *</label>
+                  <select 
+                    value={formData.level} 
+                    onChange={(e) => setFormData(prev => ({ ...prev, level: e.target.value as typeof formData.level }))}
+                    className="w-full p-3 border rounded-xl bg-[#2A2A2A] border-[#444] text-white focus:border-[#4A90E2] focus:ring-1 focus:ring-[#4A90E2] transition-colors"
+                    title="Select video difficulty level"
+                  >
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+
+                {/* Playlist Options for Videos */}
+                <div className="border-t border-white/10 pt-6 mt-6">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        id="addToPlaylist"
+                        checked={formData.addToPlaylist}
+                        onChange={(e) => setFormData(prev => ({ ...prev, addToPlaylist: e.target.checked }))}
+                        className="sr-only"
+                      />
+                      <label 
+                        htmlFor="addToPlaylist" 
+                        className={`relative flex items-center justify-center w-5 h-5 rounded-md border-2 transition-all duration-300 cursor-pointer ${
+                          formData.addToPlaylist 
+                            ? 'bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] border-[#4A90E2] shadow-lg shadow-[#4A90E2]/30' 
+                            : 'bg-[#2A2A2A]/50 border-white/20 hover:border-white/30 backdrop-blur-xl'
+                        }`}
+                      >
+                        {formData.addToPlaylist && (
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </label>
+                    </div>
+                    <label htmlFor="addToPlaylist" className="text-sm font-semibold text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text cursor-pointer">
+                      Add to Playlist
+                    </label>
+                  </div>
+
+                  {formData.addToPlaylist && (
+                    <div className="space-y-4 ml-8 p-4 rounded-2xl bg-[#2A2A2A]/30 backdrop-blur-xl border border-white/10">
+                      <div className="flex gap-8">
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, playlistOption: "new" }))}
+                          className={`relative pb-2 text-sm font-semibold transition-all duration-300 ${
+                            formData.playlistOption === "new"
+                              ? 'text-transparent bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] bg-clip-text'
+                              : 'text-[#AFAFAF] hover:text-white'
+                          }`}
+                        >
+                          New Playlist
+                          {formData.playlistOption === "new" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] rounded-full" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, playlistOption: "existing" }))}
+                          className={`relative pb-2 text-sm font-semibold transition-all duration-300 ${
+                            formData.playlistOption === "existing"
+                              ? 'text-transparent bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] bg-clip-text'
+                              : 'text-[#AFAFAF] hover:text-white'
+                          }`}
+                        >
+                          Existing Playlist
+                          {formData.playlistOption === "existing" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] rounded-full" />
+                          )}
+                        </button>
+                      </div>
+
+                      <div className="mt-6">
+                        {formData.playlistOption === "new" && (
+                          <div className="space-y-3">
+                            <label className="block text-xs font-semibold text-transparent bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] bg-clip-text">
+                              New Playlist Name
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={formData.playlistName}
+                                onChange={(e) => setFormData(prev => ({ ...prev, playlistName: e.target.value }))}
+                                className="w-full p-4 border rounded-2xl bg-gradient-to-br from-[#2A2A2A]/60 to-[#1A1A1A]/60 backdrop-blur-xl border-[#4A90E2]/30 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/20 transition-all duration-300 hover:border-[#4A90E2]/40 shadow-inner text-sm"
+                                placeholder="Enter new playlist name"
+                              />
+                              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#4A90E2]/5 to-transparent pointer-events-none" />
+                            </div>
+                          </div>
+                        )}
+
+                        {formData.playlistOption === "existing" && (
+                          <div className="space-y-3">
+                            <label className="block text-xs font-semibold text-transparent bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] bg-clip-text">
+                              Choose Existing Playlist
+                            </label>
+                            <div className="relative">
+                              <select
+                                value={formData.existingPlaylistId}
+                                onChange={(e) => setFormData(prev => ({ ...prev, existingPlaylistId: e.target.value }))}
+                                className="w-full p-4 border rounded-2xl bg-gradient-to-br from-[#2A2A2A]/60 to-[#1A1A1A]/60 backdrop-blur-xl border-[#4A90E2]/30 text-white focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/20 transition-all duration-300 hover:border-[#4A90E2]/40 shadow-inner text-sm cursor-pointer appearance-none"
+                                title="Select existing playlist"
+                              >
+                                <option value="" className="bg-gray-800 text-white">Select existing playlist</option>
+                                {existingPlaylists.map((playlist) => (
+                                  <option key={playlist.id} value={playlist.id} className="bg-gray-800 text-white">
+                                    {playlist.title}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                                <svg className="w-4 h-4 text-[#4A90E2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#4A90E2]/5 to-transparent pointer-events-none" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Course Form */}
+            {contentType === "course" && (
+              <div className="space-y-6 p-6 rounded-2xl bg-gradient-to-br from-[#2A2A2A]/60 to-[#1A1A1A]/60 backdrop-blur-xl border border-[#4A90E2]/20 shadow-xl">
+                {/* Course Form Header */}
+                <div className="flex items-center gap-3 mb-6 p-3 rounded-xl bg-gradient-to-r from-[#4A90E2]/10 to-[#3A7BD5]/10 border border-[#4A90E2]/20">
+                  <div className="w-3 h-3 bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] rounded-full shadow-lg"></div>
+                  <span className="text-lg font-bold text-transparent bg-gradient-to-r from-[#4A90E2] to-[#3A7BD5] bg-clip-text">📚 Course Information</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Course Title *</label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner"
+                      placeholder="Enter course title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Instructor *</label>
+                    <input
+                      type="text"
+                      value={formData.author}
+                      onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
+                      className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner"
+                      placeholder="Course instructor name"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Course URL *</label>
                   <input
-                    type="text"
-                    value={formData.duration}
-                    onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
-                    className="w-full p-2 border rounded-lg bg-background"
-                    placeholder="e.g., 15:30"
+                    type="url"
+                    value={formData.url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
+                    className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner"
+                    placeholder="https://example.com/course-link"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-3 text-transparent bg-gradient-to-r from-white to-white/80 bg-clip-text">Course Description *</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full p-4 border rounded-2xl bg-[#2A2A2A]/50 backdrop-blur-xl border-white/10 text-white placeholder-[#AFAFAF] focus:border-[#4A90E2]/60 focus:ring-2 focus:ring-[#4A90E2]/30 transition-all duration-300 hover:border-white/20 shadow-inner h-32 resize-none"
+                    placeholder="Provide a detailed description of the course content, objectives, and what students will learn..."
                   />
                 </div>
               </div>
             )}
 
-            {["blog", "course"].includes(contentType) && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Content</label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  className="w-full p-2 border rounded-lg bg-background h-40"
-                  placeholder="Write your content here..."
-                />
-              </div>
-            )}
-
-            <div className="flex justify-end gap-3 pt-4">
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-4 pt-8 border-t border-white/10 relative">
               <button 
                 onClick={() => setShowPublishDialog(false)}
-                className="px-4 py-2 border rounded-lg hover:bg-accent"
+                className="group relative px-8 py-3 border border-white/20 rounded-2xl hover:bg-[#333]/60 hover:border-white/30 text-[#F0F0F0] font-semibold transition-all duration-300 backdrop-blur-xl overflow-hidden"
               >
-                Cancel
+                <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+                <span className="relative">Cancel</span>
               </button>
               <button 
                 onClick={handlePublish}
-                className="px-4 py-2 bg-[#4A90E2] text-white rounded-lg hover:bg-[#4A90E2]/80"
+                className="group relative px-8 py-3 bg-gradient-to-r from-[#4A90E2]/90 via-[#5B9BD5]/90 to-[#3A7BD5]/90 hover:from-[#4A90E2] hover:via-[#5B9BD5] hover:to-[#3A7BD5] text-white rounded-2xl font-semibold transition-all duration-500 transform hover:scale-[1.02] shadow-2xl hover:shadow-[0_20px_40px_rgba(74,144,226,0.4)] backdrop-blur-xl border border-white/20 hover:border-white/30 overflow-hidden"
               >
-                Publish
+                {/* Glass effect overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+                
+                {/* Animated background shimmer */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-[#4A90E2] via-[#7B68EE] to-[#3A7BD5] rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity duration-300" />
+                
+                <span className="relative flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
+                  Publish {contentType}
+                </span>
               </button>
             </div>
           </div>
