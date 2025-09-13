@@ -41,6 +41,7 @@ const App = () => (
               <Route path="settings" element={<Settings />} />
               <Route path="debug-strategies" element={<DebugStrategies />} />
               <Route path="user-strategies" element={<UserStrategies />} />
+              <Route path="backtest" element={<Backtest />} />
               <Route path="backtest/:id" element={<Backtest />} />
               <Route path="*" element={<NotFound />} />
             </Route>

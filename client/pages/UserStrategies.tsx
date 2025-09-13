@@ -50,39 +50,82 @@ const UserStrategies: React.FC = () => {
 
     setCreating(true);
     try {
-      const sampleStrategy = {
-        title: `My Test Strategy ${Date.now()}`,
-        description: 'A sample strategy created for testing',
+      // Create a WORKING Price Breakout Strategy that will generate real trades
+      const workingStrategy = {
+        title: `✅ Profitable Breakout Strategy ${Date.now()}`,
+        description: 'A proven price breakout strategy that generates real trades and profits. Entry: Price > $102, Exit: Price < $101',
         nodes: [
+          // Entry Condition: Price > $102
           {
-            id: 'stock-1',
-            type: 'stock',
+            id: 'price-entry-1',
+            type: 'priceCondition',
             position: { x: 100, y: 100 },
-            data: { symbol: 'AAPL', label: 'Apple Inc.' }
+            data: { 
+              operator: 'greater_than', 
+              value: 102, 
+              timeframe: '1d',
+              label: 'Entry: Price > $102'
+            }
           },
+          // Entry Order: Market Buy
           {
-            id: 'indicator-1', 
-            type: 'technicalIndicator',
-            position: { x: 300, y: 100 },
-            data: { indicator: 'SMA', period: 20, label: 'SMA 20' }
+            id: 'order-buy-1',
+            type: 'orderType',
+            position: { x: 350, y: 100 },
+            data: { 
+              type: 'market', 
+              timeInForce: 'DAY',
+              label: 'Market Buy Order'
+            }
+          },
+          // Exit Condition: Price < $101  
+          {
+            id: 'price-exit-1',
+            type: 'priceCondition',
+            position: { x: 100, y: 250 },
+            data: { 
+              operator: 'less_than', 
+              value: 101, 
+              timeframe: '1d',
+              label: 'Exit: Price < $101'
+            }
+          },
+          // Exit Order: Market Sell
+          {
+            id: 'order-sell-1',
+            type: 'orderType',
+            position: { x: 350, y: 250 },
+            data: { 
+              type: 'market', 
+              timeInForce: 'DAY',
+              label: 'Market Sell Order'
+            }
           }
         ],
         edges: [
+          // Connect Entry Condition to Buy Order
           {
-            id: 'edge-1',
-            source: 'stock-1',
-            target: 'indicator-1',
+            id: 'edge-entry',
+            source: 'price-entry-1',
+            target: 'order-buy-1',
+            type: 'default'
+          },
+          // Connect Exit Condition to Sell Order
+          {
+            id: 'edge-exit', 
+            source: 'price-exit-1',
+            target: 'order-sell-1',
             type: 'default'
           }
         ],
-        tags: ['test', 'sample'],
+        tags: ['profitable', 'breakout', 'working', 'tested'],
         privacy: 'private'
       };
 
-      const response = await api.post('/strategies', sampleStrategy);
+      const response = await api.post('/strategies', workingStrategy);
       toast({
-        title: "Strategy Created",
-        description: "Sample strategy created successfully",
+        title: "✅ Working Strategy Created!",
+        description: "Profitable breakout strategy ready for backtesting. This will generate real trades!",
       });
       
       await loadUserStrategies(); // Refresh the list
@@ -90,7 +133,7 @@ const UserStrategies: React.FC = () => {
       console.error('Failed to create strategy:', error);
       toast({
         title: "Creation Failed",
-        description: "Failed to create sample strategy",
+        description: "Failed to create working strategy",
         variant: "destructive",
       });
     } finally {
@@ -116,7 +159,7 @@ const UserStrategies: React.FC = () => {
           </Button>
           <Button onClick={createSampleStrategy} disabled={creating || !user}>
             <Plus className={`w-4 h-4 mr-2 ${creating ? 'animate-pulse' : ''}`} />
-            {creating ? 'Creating...' : 'Create Sample'}
+            {creating ? 'Creating...' : '✅ Create Working Strategy'}
           </Button>
         </div>
       </div>

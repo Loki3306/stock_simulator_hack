@@ -364,10 +364,14 @@ class HybridBacktester:
 
     def _check_condition_logic(self, condition: Condition, value1: float, value2: Optional[float]) -> bool:
         compare_value = value2 if value2 is not None else condition.threshold
-        if condition.condition_type == 'LessThan':
+        operator = condition.operator.lower()
+        
+        if operator in ['less_than', 'lessthan', 'crosses_below']:
             return value1 < compare_value
-        elif condition.condition_type == 'GreaterThan':
+        elif operator in ['greater_than', 'greaterthan', 'crosses_above']:
             return value1 > compare_value
+        elif operator in ['equal_to', 'equalto']:
+            return abs(value1 - compare_value) < 0.01  # Small tolerance for float comparison
         return False
 
     def _execute_strategy_group(self, group: Dict, current_price: float, current_date: datetime):

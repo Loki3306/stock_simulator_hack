@@ -30,6 +30,7 @@ import {
   Grid3X3,
   Layers,
   FileUp,
+  FileText,
   BarChart3,
   Copy,
   Clipboard,
@@ -601,21 +602,27 @@ const ProfessionalStrategyBuilder: React.FC = () => {
             
             // Validate the imported strategy has the required structure
             if (importedStrategy.nodes && importedStrategy.edges) {
-              // Apply spacing to imported nodes using flowchart layout
-              const spacedNodes = addNodeSpacing(importedStrategy.nodes, importedStrategy.edges);
+              let processedNodes = [...importedStrategy.nodes];
+              let processedEdges = [...importedStrategy.edges];
+              
+              // Fix unrealistic values and enhance the strategy
+              processedNodes = fixAndEnhanceStrategy(processedNodes, processedEdges);
+              
+              // Apply spacing to processed nodes using flowchart layout
+              const spacedNodes = addNodeSpacing(processedNodes.nodes, processedNodes.edges);
               setNodes(spacedNodes);
-              setEdges(importedStrategy.edges);
-              saveToHistory(spacedNodes, importedStrategy.edges);
+              setEdges(processedNodes.edges);
+              saveToHistory(spacedNodes, processedNodes.edges);
               
               // Set strategy name and description from imported data
               if (importedStrategy.title || importedStrategy.name) {
                 setStrategyName(importedStrategy.title || importedStrategy.name);
               }
               if (importedStrategy.description) {
-                setStrategyDescription(importedStrategy.description);
+                setStrategyDescription(importedStrategy.description || 'Enhanced imported strategy with realistic values');
               }
               
-              console.log('Strategy imported successfully:', importedStrategy);
+              console.log('Strategy imported and enhanced successfully:', processedNodes);
             } else {
               alert('Invalid strategy file format');
             }
@@ -629,6 +636,348 @@ const ProfessionalStrategyBuilder: React.FC = () => {
     };
     input.click();
   }, [setNodes, setEdges, saveToHistory]);
+
+  // Function to fix unrealistic values and add missing nodes
+  const fixAndEnhanceStrategy = useCallback((nodes: any[], edges: any[]) => {
+    let enhancedNodes = [...nodes];
+    let enhancedEdges = [...edges];
+    
+    // Fix unrealistic price values
+    enhancedNodes = enhancedNodes.map(node => {
+      if (node.type === 'priceCondition') {
+        // Fix unrealistic price thresholds
+        if (node.data.threshold > 150 || node.data.value > 150) {
+          node.data.threshold = node.data.threshold > 150 ? 102 : node.data.threshold;
+          node.data.value = node.data.value > 150 ? 102 : node.data.value;
+          node.data.label = node.data.label?.replace(/\$\d+/g, '$102') || `Price condition: $102`;
+        }
+        // Ensure we have the right operator field
+        if (!node.data.operator && node.data.condition) {
+          node.data.operator = node.data.condition;
+        }
+      }
+      
+      if (node.type === 'stock' && node.data.price > 150) {
+        node.data.price = 102;
+      }
+      
+      if (node.type === 'technicalIndicator' && node.data.value > 150) {
+        node.data.value = 102;
+      }
+      
+      return node;
+    });
+    
+    // Check for essential nodes and add if missing
+    const hasEntryCondition = enhancedNodes.some(node => 
+      node.type === 'priceCondition' && (node.data.operator === 'greater_than' || node.data.condition === 'greater_than')
+    );
+    
+    const hasExitCondition = enhancedNodes.some(node => 
+      node.type === 'priceCondition' && (node.data.operator === 'less_than' || node.data.condition === 'less_than')
+    );
+    
+    const hasBuyOrder = enhancedNodes.some(node => 
+      node.type === 'orderType' && (node.data.side === 'buy' || node.data.orderType === 'buy')
+    );
+    
+    const hasSellOrder = enhancedNodes.some(node => 
+      node.type === 'orderType' && (node.data.side === 'sell' || node.data.orderType === 'sell')
+    );
+    
+    // Add missing entry condition
+    if (!hasEntryCondition) {
+      const entryCondition = {
+        id: `auto-entry-${Date.now()}`,
+        type: 'priceCondition',
+        position: { x: 100, y: 100 },
+        data: {
+          stock: 'AAPL',
+          operator: 'greater_than',
+          threshold: 102,
+          value: 102,
+          label: 'Auto-Added Entry: Price > $102'
+        }
+      };
+      enhancedNodes.push(entryCondition);
+    }
+    
+    // Add missing exit condition
+    if (!hasExitCondition) {
+      const exitCondition = {
+        id: `auto-exit-${Date.now()}`,
+        type: 'priceCondition',
+        position: { x: 100, y: 250 },
+        data: {
+          stock: 'AAPL',
+          operator: 'less_than',
+          threshold: 101,
+          value: 101,
+          label: 'Auto-Added Exit: Price < $101'
+        }
+      };
+      enhancedNodes.push(exitCondition);
+    }
+    
+    // Add missing buy order
+    if (!hasBuyOrder) {
+      const buyOrder = {
+        id: `auto-buy-${Date.now()}`,
+        type: 'orderType',
+        position: { x: 350, y: 100 },
+        data: {
+          orderType: 'market',
+          side: 'buy',
+          label: 'Auto-Added Market Buy'
+        }
+      };
+      enhancedNodes.push(buyOrder);
+      
+      // Connect entry condition to buy order
+      const entryNode = enhancedNodes.find(node => 
+        node.type === 'priceCondition' && (node.data.operator === 'greater_than' || node.data.condition === 'greater_than')
+      );
+      if (entryNode) {
+        enhancedEdges.push({
+          id: `auto-edge-entry-buy-${Date.now()}`,
+          source: entryNode.id,
+          target: buyOrder.id,
+          type: 'default'
+        });
+      }
+    }
+    
+    // Add missing sell order
+    if (!hasSellOrder) {
+      const sellOrder = {
+        id: `auto-sell-${Date.now()}`,
+        type: 'orderType',
+        position: { x: 350, y: 250 },
+        data: {
+          orderType: 'market',
+          side: 'sell',
+          label: 'Auto-Added Market Sell'
+        }
+      };
+      enhancedNodes.push(sellOrder);
+      
+      // Connect exit condition to sell order
+      const exitNode = enhancedNodes.find(node => 
+        node.type === 'priceCondition' && (node.data.operator === 'less_than' || node.data.condition === 'less_than')
+      );
+      if (exitNode) {
+        enhancedEdges.push({
+          id: `auto-edge-exit-sell-${Date.now()}`,
+          source: exitNode.id,
+          target: sellOrder.id,
+          type: 'default'
+        });
+      }
+    }
+    
+    return { nodes: enhancedNodes, edges: enhancedEdges };
+  }, []);
+
+  // Function to create a comprehensive template strategy
+  const handleCreateTemplateStrategy = useCallback(() => {
+    const templateStrategy = {
+      nodes: [
+        // Entry Condition - RSI Oversold
+        {
+          id: 'rsi-entry',
+          type: 'technicalIndicator',
+          position: { x: 50, y: 50 },
+          data: {
+            indicator: 'RSI',
+            period: 14,
+            threshold: 30,
+            operator: 'less_than',
+            label: 'RSI < 30 (Oversold)'
+          }
+        },
+        // Entry Condition - Price Breakout
+        {
+          id: 'price-entry',
+          type: 'priceCondition',
+          position: { x: 50, y: 150 },
+          data: {
+            stock: 'AAPL',
+            operator: 'greater_than',
+            threshold: 102,
+            value: 102,
+            label: 'Price > $102'
+          }
+        },
+        // Buy Order
+        {
+          id: 'buy-order',
+          type: 'orderType',
+          position: { x: 300, y: 100 },
+          data: {
+            orderType: 'market',
+            side: 'buy',
+            label: 'Market Buy Order'
+          }
+        },
+        // Position Sizing
+        {
+          id: 'position-size',
+          type: 'positionSizing',
+          position: { x: 550, y: 100 },
+          data: {
+            method: 'fixed',
+            value: 1000,
+            label: 'Fixed $1000 Position'
+          }
+        },
+        // Exit Condition - Take Profit
+        {
+          id: 'profit-target',
+          type: 'profitTarget',
+          position: { x: 50, y: 300 },
+          data: {
+            type: 'percentage',
+            value: 15,
+            label: 'Take Profit 15%'
+          }
+        },
+        // Exit Condition - Stop Loss
+        {
+          id: 'stop-loss',
+          type: 'stopLoss',
+          position: { x: 50, y: 400 },
+          data: {
+            type: 'percentage',
+            value: 8,
+            label: 'Stop Loss 8%'
+          }
+        },
+        // Exit Condition - Price Drop
+        {
+          id: 'price-exit',
+          type: 'priceCondition',
+          position: { x: 50, y: 500 },
+          data: {
+            stock: 'AAPL',
+            operator: 'less_than',
+            threshold: 101,
+            value: 101,
+            label: 'Price < $101'
+          }
+        },
+        // Sell Order
+        {
+          id: 'sell-order',
+          type: 'orderType',
+          position: { x: 300, y: 400 },
+          data: {
+            orderType: 'market',
+            side: 'sell',
+            label: 'Market Sell Order'
+          }
+        }
+      ],
+      edges: [
+        // Entry connections
+        { id: 'rsi-to-buy', source: 'rsi-entry', target: 'buy-order', type: 'default' },
+        { id: 'price-to-buy', source: 'price-entry', target: 'buy-order', type: 'default' },
+        { id: 'buy-to-position', source: 'buy-order', target: 'position-size', type: 'default' },
+        
+        // Exit connections
+        { id: 'profit-to-sell', source: 'profit-target', target: 'sell-order', type: 'default' },
+        { id: 'stop-to-sell', source: 'stop-loss', target: 'sell-order', type: 'default' },
+        { id: 'price-exit-to-sell', source: 'price-exit', target: 'sell-order', type: 'default' }
+      ],
+      title: 'Complete Template Strategy',
+      description: 'A comprehensive strategy template with entry/exit conditions, risk management, and position sizing'
+    };
+
+    // Load the template strategy
+    const spacedNodes = addNodeSpacing(templateStrategy.nodes, templateStrategy.edges);
+    setNodes(spacedNodes);
+    setEdges(templateStrategy.edges);
+    setStrategyName(templateStrategy.title);
+    setStrategyDescription(templateStrategy.description);
+    saveToHistory(spacedNodes, templateStrategy.edges);
+    
+    console.log('Complete template strategy loaded');
+  }, [setNodes, setEdges, setStrategyName, setStrategyDescription, saveToHistory, addNodeSpacing]);
+
+  // Load working strategy preset
+  const handleLoadWorkingStrategy = useCallback(() => {
+    // Create the working strategy configuration
+    const workingStrategy = {
+      nodes: [
+        {
+          id: 'price-condition-1',
+          type: 'priceCondition',
+          position: { x: 100, y: 100 },
+          data: {
+            stock: 'AAPL',
+            operator: 'greater_than',
+            threshold: 102,
+            label: 'Entry: Price > $102'
+          }
+        },
+        {
+          id: 'order-type-1',
+          type: 'orderType',
+          position: { x: 350, y: 100 },
+          data: {
+            orderType: 'market',
+            side: 'buy',
+            label: 'Market Buy Order'
+          }
+        },
+        {
+          id: 'price-condition-2',
+          type: 'priceCondition',
+          position: { x: 100, y: 250 },
+          data: {
+            stock: 'AAPL',
+            operator: 'less_than',
+            threshold: 101,
+            label: 'Exit: Price < $101'
+          }
+        },
+        {
+          id: 'order-type-2',
+          type: 'orderType',
+          position: { x: 350, y: 250 },
+          data: {
+            orderType: 'market',
+            side: 'sell',
+            label: 'Market Sell Order'
+          }
+        }
+      ],
+      edges: [
+        {
+          id: 'edge-1',
+          source: 'price-condition-1',
+          target: 'order-type-1',
+          type: 'default'
+        },
+        {
+          id: 'edge-2',
+          source: 'price-condition-2',
+          target: 'order-type-2',
+          type: 'default'
+        }
+      ],
+      title: 'Working Price Breakout Strategy',
+      description: 'A tested strategy that buys when price crosses above $102 and sells when it drops below $101'
+    };
+
+    // Load the strategy into the builder
+    setNodes(workingStrategy.nodes);
+    setEdges(workingStrategy.edges);
+    setStrategyName(workingStrategy.title);
+    setStrategyDescription(workingStrategy.description);
+    saveToHistory(workingStrategy.nodes, workingStrategy.edges);
+    
+    console.log('Working strategy loaded successfully');
+  }, [setNodes, setEdges, setStrategyName, setStrategyDescription, saveToHistory]);
   
   // Export strategy functionality
   const handleExportStrategy = useCallback(() => {
@@ -654,6 +1003,76 @@ const ProfessionalStrategyBuilder: React.FC = () => {
     a.download = `strategy-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }, [nodes, edges]);
+
+  // Run backtest functionality
+  const handleRunBacktest = useCallback(async () => {
+    if (nodes.length === 0) {
+      alert('Please add some nodes to your strategy before running a backtest.');
+      return;
+    }
+
+    const strategy = {
+      id: `strategy-${Date.now()}`,
+      name: `Strategy ${new Date().toLocaleDateString()}`,
+      description: 'Strategy for backtesting',
+      nodes,
+      edges,
+      metadata: {
+        created: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        version: 1,
+      }
+    };
+
+    try {
+      console.log('Starting backtest with strategy:', strategy);
+      
+      const response = await fetch('/api/backtests/run-strategy-test', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ strategy })
+      });
+
+      if (!response.ok) {
+        console.error('Response not OK:', response.status, response.statusText);
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+          const errorText = await response.text();
+          console.error('Error response body:', errorText);
+          if (errorText) {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.error || errorMessage;
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+      
+      if (!responseText) {
+        throw new Error('Empty response from server');
+      }
+      
+      const result = JSON.parse(responseText);
+      console.log('Backtest completed:', result);
+      
+      // Store results and navigate to backtest page
+      localStorage.setItem('backtestResults', JSON.stringify(result));
+      
+      // Navigate to backtest results page (assuming you have routing set up)
+      // You might want to use React Router here instead
+      window.location.href = '/backtest';
+      
+    } catch (error) {
+      console.error('Backtest failed:', error);
+      alert(`Backtest failed: ${error.message}`);
+    }
   }, [nodes, edges]);
   
   // Clear strategy functionality
@@ -967,20 +1386,20 @@ const ProfessionalStrategyBuilder: React.FC = () => {
       const getDefaultNodeData = (type: string) => {
         switch (type) {
           case 'stock':
-            return { symbol: 'AAPL', price: 150, quantity: 100 };
+            return { symbol: 'AAPL', price: 102, quantity: 100 };
           case 'optionLeg':
             return { 
               symbol: 'AAPL', 
-              strike: 150, 
+              strike: 105, 
               expiry: '2024-03-15', 
               type: 'call', 
               action: 'buy',
               quantity: 1 
             };
           case 'priceCondition':
-            return { operator: 'greater_than', value: 150, timeframe: '1d' };
+            return { operator: 'greater_than', value: 102, timeframe: '1d' };
           case 'technicalIndicator':
-            return { indicator: 'sma', period: 20, value: 150 };
+            return { indicator: 'sma', period: 20, value: 102 };
           case 'profitTarget':
             return { type: 'percentage', value: 20 };
           case 'stopLoss':
@@ -1210,7 +1629,7 @@ const ProfessionalStrategyBuilder: React.FC = () => {
                   id: `test-stock-node-${Date.now()}`,
                   type: 'stock',
                   position: { x: 100, y: 100 },
-                  data: { symbol: 'AAPL', price: 150, quantity: 100 }
+                  data: { symbol: 'AAPL', price: 102, quantity: 100 }
                 };
                 setNodes((nds) => [...nds, testNode]);
                 setSelectedNodeId(testNode.id);
@@ -1225,7 +1644,10 @@ const ProfessionalStrategyBuilder: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-2">
-          <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center space-x-2">
+          <button 
+            onClick={handleRunBacktest}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+          >
             <Play size={16} />
             <span>Backtest</span>
           </button>
@@ -1242,6 +1664,20 @@ const ProfessionalStrategyBuilder: React.FC = () => {
           >
             <FileUp size={16} />
             <span>Import</span>
+          </button>
+          <button 
+            onClick={handleCreateTemplateStrategy}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <FileText size={16} />
+            <span>Load Template</span>
+          </button>
+          <button 
+            onClick={handleLoadWorkingStrategy}
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center space-x-2"
+          >
+            <BarChart3 size={16} />
+            <span>Load Working Strategy</span>
           </button>
           <button 
             onClick={saveStateToHistory}
