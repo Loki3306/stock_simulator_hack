@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import api, { setAccessToken } from "@/lib/api";
+import api, { setAccessToken, getAccessToken } from "@/lib/api";
 
 interface User {
   id: string;
@@ -26,10 +26,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get("/auth/user");
-        setUser(data);
-      } catch {
+        // Only check auth if we already have a token (e.g., from a previous session)
+        const currentToken = getAccessToken();
+        if (currentToken) {
+          const { data } = await api.get("/auth/user");
+          setUser(data);
+        } else {
+          // No token available, user is not logged in
+          setUser(null);
+        }
+      } catch (error) {
+        // Token might be expired or invalid
+        console.log('Auth check failed, clearing user state');
         setUser(null);
+        setAccessToken(null); // Clear invalid token
       }
       setLoading(false);
     })();

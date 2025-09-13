@@ -10,6 +10,10 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+export function getAccessToken() {
+  return accessToken;
+}
+
 api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
   return config;
@@ -27,6 +31,11 @@ api.interceptors.response.use(
   (r) => r,
   async (error) => {
     if (error.response?.status === 401 && !error.config.__retried) {
+      // Skip refresh for initial auth check or if no token exists
+      if (error.config.url?.includes('/auth/user') || !accessToken) {
+        return Promise.reject(error);
+      }
+      
       if (!refreshing) refreshing = refresh();
       const token = await refreshing.finally(() => (refreshing = null));
       if (token) {
