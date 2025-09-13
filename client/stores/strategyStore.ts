@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Node, Edge } from 'reactflow';
+import api from '../lib/api';
 
 export interface StrategyData {
   id: string;
@@ -14,6 +15,21 @@ export interface StrategyData {
     backtest_results?: any;
     risk_metrics?: any;
   };
+}
+
+// Database strategy interface (matches server model)
+export interface DbStrategy {
+  _id: string;
+  ownerId: string;
+  title: string;
+  description?: string;
+  nodes: Node[];
+  edges: Edge[];
+  version: number;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+  privacy: "private" | "public" | "marketplace";
 }
 
 export interface ValidationError {
@@ -38,6 +54,10 @@ interface StrategyStore {
   history: StrategyData[];
   historyIndex: number;
   
+  // Database state
+  currentDbStrategyId: string | null;
+  isLoading: boolean;
+  
   // Actions
   updateStrategy: (nodes: Node[], edges: Edge[]) => void;
   setStrategyName: (name: string) => void;
@@ -48,6 +68,13 @@ interface StrategyStore {
   undo: () => StrategyData | null;
   redo: () => StrategyData | null;
   resetStrategy: () => void;
+  
+  // Database actions
+  saveStrategyToDB: (tags?: string[], privacy?: "private" | "public" | "marketplace") => Promise<DbStrategy | null>;
+  loadStrategyFromDB: (id: string) => Promise<boolean>;
+  updateStrategyInDB: (tags?: string[], privacy?: "private" | "public" | "marketplace") => Promise<DbStrategy | null>;
+  deleteStrategyFromDB: (id: string) => Promise<boolean>;
+  createNewStrategy: () => void;
   
   // UI actions
   setSelectedNodeId: (nodeId: string | null) => void;
@@ -78,6 +105,8 @@ export const useStrategyStore = create<StrategyStore>((set, get) => ({
   isValid: true,
   history: [],
   historyIndex: -1,
+  currentDbStrategyId: null,
+  isLoading: false,
   
   updateStrategy: (nodes: Node[], edges: Edge[]) => {
     const currentStrategy = get().strategyData;
@@ -326,5 +355,136 @@ export const useStrategyStore = create<StrategyStore>((set, get) => ({
   canRedo: () => {
     const { history, historyIndex } = get();
     return historyIndex < history.length - 1;
+  },
+
+  // Database methods
+  saveStrategyToDB: async (tags: string[] = [], privacy: "private" | "public" | "marketplace" = "private") => {
+    try {
+      set({ isLoading: true });
+      const { strategyData } = get();
+      
+      const payload = {
+        title: strategyData.name || 'Untitled Strategy',
+        description: strategyData.description || '',
+        nodes: strategyData.nodes,
+        edges: strategyData.edges,
+        tags,
+        privacy,
+      };
+      
+      const response = await api.post('/strategies', payload);
+      const dbStrategy: DbStrategy = response.data;
+      
+      set({ 
+        currentDbStrategyId: dbStrategy._id,
+        isLoading: false 
+      });
+      
+      return dbStrategy;
+    } catch (error) {
+      console.error('Failed to save strategy to database:', error);
+      set({ isLoading: false });
+      return null;
+    }
+  },
+
+  loadStrategyFromDB: async (id: string) => {
+    try {
+      set({ isLoading: true });
+      
+      const response = await api.get(`/strategies/${id}`);
+      const dbStrategy: DbStrategy = response.data;
+      
+      // Convert DB strategy to local strategy format
+      const localStrategy: StrategyData = {
+        id: dbStrategy._id,
+        name: dbStrategy.title,
+        description: dbStrategy.description,
+        nodes: dbStrategy.nodes || [],
+        edges: dbStrategy.edges || [],
+        metadata: {
+          created: dbStrategy.createdAt,
+          lastModified: dbStrategy.updatedAt,
+          version: dbStrategy.version,
+        },
+      };
+      
+      set({
+        strategyData: localStrategy,
+        currentDbStrategyId: dbStrategy._id,
+        isLoading: false,
+        validationErrors: [],
+        history: [localStrategy],
+        historyIndex: 0,
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to load strategy from database:', error);
+      set({ isLoading: false });
+      return false;
+    }
+  },
+
+  updateStrategyInDB: async (tags: string[] = [], privacy: "private" | "public" | "marketplace" = "private") => {
+    try {
+      const { currentDbStrategyId, strategyData } = get();
+      if (!currentDbStrategyId) {
+        // If no current DB ID, save as new strategy
+        return get().saveStrategyToDB(tags, privacy);
+      }
+      
+      set({ isLoading: true });
+      
+      const payload = {
+        title: strategyData.name || 'Untitled Strategy',
+        description: strategyData.description || '',
+        nodes: strategyData.nodes,
+        edges: strategyData.edges,
+        tags,
+        privacy,
+      };
+      
+      const response = await api.put(`/strategies/${currentDbStrategyId}`, payload);
+      const dbStrategy: DbStrategy = response.data;
+      
+      set({ isLoading: false });
+      return dbStrategy;
+    } catch (error) {
+      console.error('Failed to update strategy in database:', error);
+      set({ isLoading: false });
+      return null;
+    }
+  },
+
+  deleteStrategyFromDB: async (id: string) => {
+    try {
+      set({ isLoading: true });
+      await api.delete(`/strategies/${id}`);
+      
+      // If we're deleting the current strategy, reset to new strategy
+      if (get().currentDbStrategyId === id) {
+        get().createNewStrategy();
+      }
+      
+      set({ isLoading: false });
+      return true;
+    } catch (error) {
+      console.error('Failed to delete strategy from database:', error);
+      set({ isLoading: false });
+      return false;
+    }
+  },
+
+  createNewStrategy: () => {
+    set({
+      strategyData: createEmptyStrategy(),
+      validationErrors: [],
+      isValid: true,
+      history: [],
+      historyIndex: -1,
+      selectedNodeId: null,
+      currentDbStrategyId: null,
+    });
   },
 }));

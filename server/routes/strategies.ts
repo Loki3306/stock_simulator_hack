@@ -7,9 +7,18 @@ export const strategiesRouter = Router();
 strategiesRouter.get("/", authenticate as any, async (req: any, res) => {
   const { owner, tag, marketplace } = req.query as any;
   const filter: any = {};
-  if (owner) filter.ownerId = owner;
+  
+  // If no specific owner requested, return current user's strategies
+  if (owner) {
+    filter.ownerId = owner;
+  } else if (!marketplace) {
+    // Default to current user's strategies unless looking for marketplace items
+    filter.ownerId = req.user.id;
+  }
+  
   if (tag) filter.tags = tag;
   if (marketplace) filter.privacy = "marketplace";
+  
   const items = await Strategy.find(filter).sort({ updatedAt: -1 }).limit(100);
   res.json(items);
 });

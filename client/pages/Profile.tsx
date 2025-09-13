@@ -56,9 +56,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface UserStrategy {
-  id: string;
+  _id: string;
+  ownerId: string;
   title: string;
-  description: string;
+  description?: string;
   nodes: any[];
   edges: any[];
   tags: string[];
@@ -105,17 +106,46 @@ export default function Profile() {
     }
   }, [user]);
 
+  // Refresh data periodically to catch new strategies
+  useEffect(() => {
+    if (user) {
+      const interval = setInterval(() => {
+        console.log('Auto-refreshing user strategies...');
+        loadUserData();
+      }, 30000); // Refresh every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
   const loadUserData = async () => {
     try {
       setLoading(true);
       
-      // Load user strategies
-      const strategiesResponse = await api.get(`/strategies?owner=${user?.id}`);
+      // Load user strategies - don't send owner param, the auth middleware handles this
+      const strategiesResponse = await api.get('/strategies');
+      console.log('Loaded strategies from API:', strategiesResponse.data);
+      console.log('API response type:', typeof strategiesResponse.data);
+      console.log('Is array:', Array.isArray(strategiesResponse.data));
+      
       const userStrategies = strategiesResponse.data || [];
-      setStrategies(userStrategies);
+      
+      // Ensure we have an array before trying to filter
+      if (!Array.isArray(userStrategies)) {
+        console.error('API returned non-array data:', userStrategies);
+        throw new Error('Invalid API response format - expected array');
+      }
+      
+      // Filter to only show strategies owned by current user
+      const myStrategies = userStrategies.filter((strategy: any) => 
+        strategy.ownerId === user?.id
+      );
+      
+      console.log('Filtered my strategies:', myStrategies);
+      setStrategies(myStrategies);
       
       // Calculate user stats
-      const stats = calculateUserStats(userStrategies);
+      const stats = calculateUserStats(myStrategies);
       setUserStats(stats);
       
     } catch (error) {
@@ -151,7 +181,8 @@ export default function Profile() {
   const generateMockStrategies = (): UserStrategy[] => {
     return [
       {
-        id: "1",
+        _id: "mock-1",
+        ownerId: "mock-user-id", // Add ownerId for mock strategies
         title: "SMA Crossover Strategy",
         description: "A simple moving average crossover strategy using 20 and 50 period SMAs",
         nodes: [],
@@ -169,7 +200,8 @@ export default function Profile() {
         }
       },
       {
-        id: "2", 
+        _id: "mock-2", 
+        ownerId: "mock-user-id", // Add ownerId for mock strategies
         title: "RSI Mean Reversion",
         description: "Buy oversold conditions and sell overbought using RSI indicator",
         nodes: [],
@@ -187,7 +219,8 @@ export default function Profile() {
         }
       },
       {
-        id: "3",
+        _id: "mock-3",
+        ownerId: "mock-user-id", // Add ownerId for mock strategies
         title: "Bollinger Band Squeeze",
         description: "Advanced volatility strategy using Bollinger Bands and volume analysis",
         nodes: [],
@@ -232,13 +265,13 @@ export default function Profile() {
   const handleDeleteStrategy = async (strategyId: string) => {
     try {
       await api.delete(`/strategies/${strategyId}`);
-      setStrategies(prev => prev.filter(s => s.id !== strategyId));
-      const updatedStrategies = strategies.filter(s => s.id !== strategyId);
+      setStrategies(prev => prev.filter(s => s._id !== strategyId));
+      const updatedStrategies = strategies.filter(s => s._id !== strategyId);
       setUserStats(calculateUserStats(updatedStrategies));
     } catch (error) {
       console.error('Failed to delete strategy:', error);
       // For demo, just remove from local state
-      setStrategies(prev => prev.filter(s => s.id !== strategyId));
+      setStrategies(prev => prev.filter(s => s._id !== strategyId));
     } finally {
       setDeleteStrategyId(null);
     }
@@ -530,30 +563,16 @@ export default function Profile() {
                 ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 : "space-y-4"
             }>
-              {filteredStrategies.map((strategy) => (
+              {filteredStrategies.map((strategy, index) => (
                 <StrategyCard
-                  key={strategy.id}
+                  key={strategy._id || `strategy-${index}`}
                   strategy={strategy}
                   viewMode={viewMode}
-                  onDelete={() => setDeleteStrategyId(strategy.id)}
+                  onDelete={() => setDeleteStrategyId(strategy._id)}
                   onExport={() => handleExportStrategy(strategy)}
                   onEdit={() => {
-                    // Convert UserStrategy to StrategyData format
-                    const strategyData = {
-                      id: strategy.id,
-                      name: strategy.title,
-                      description: strategy.description,
-                      nodes: strategy.nodes,
-                      edges: strategy.edges,
-                      metadata: {
-                        created: strategy.createdAt,
-                        lastModified: strategy.updatedAt,
-                        version: strategy.version,
-                        backtest_results: strategy.backtest_results
-                      }
-                    };
-                    importStrategy(strategyData);
-                    window.location.href = '/builder';
+                    // Open strategy in builder with strategy ID
+                    window.location.href = `/builder?strategyId=${strategy._id}`;
                   }}
                 />
               ))}

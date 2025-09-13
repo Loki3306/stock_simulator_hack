@@ -55,6 +55,10 @@ import EdgeEditor from '../components/strategy-builder/EdgeEditor';
 import StrategyMetrics from '../components/strategy-builder/StrategyMetrics';
 import { useStrategyStore } from '../stores/strategyStore';
 import { repo } from '../lib/mockRepo';
+import { useToast } from '../hooks/use-toast';
+import { StrategyMigration } from '../lib/migration';
+import { SaveStrategyDialog } from '../components/strategy-builder/SaveStrategyDialog';
+import { useAuth } from '../context/AuthContext';
 
 // Define node types
 const nodeTypes: NodeTypes = {
@@ -86,7 +90,9 @@ const connectionLineStyle = {
 const ProfessionalStrategyBuilder: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const { setSelectedNodeId, selectedNodeId, undo, redo, canUndo, canRedo, saveToHistory } = useStrategyStore();
+  const { setSelectedNodeId, selectedNodeId, undo, redo, canUndo, canRedo, saveToHistory, 
+          saveStrategyToDB, loadStrategyFromDB, updateStrategyInDB, currentDbStrategyId, 
+          isLoading: strategyLoading, createNewStrategy, strategyData, setStrategyName, setStrategyDescription } = useStrategyStore();
   const [isPaletteOpen, setIsPaletteOpen] = useState(true);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(true);
@@ -98,41 +104,192 @@ const ProfessionalStrategyBuilder: React.FC = () => {
   const [isDraggingMinimap, setIsDraggingMinimap] = useState(false);
   const [showMinimap, setShowMinimap] = useState(false);
   const [showNodeLegend, setShowNodeLegend] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Load strategy from localStorage on component mount
+  // Load strategy from localStorage on component mount (migration path)
   useEffect(() => {
-    const savedStrategy = localStorage.getItem('currentStrategy');
-    if (savedStrategy) {
-      try {
-        const strategy = JSON.parse(savedStrategy);
-        if (strategy.nodes) {
-          setNodes(strategy.nodes);
+    const loadStrategy = async () => {
+      // Check if we have a strategy ID in URL params to load from DB
+      const urlParams = new URLSearchParams(window.location.search);
+      const strategyId = urlParams.get('strategyId');
+      
+      if (strategyId) {
+        const success = await loadStrategyFromDB(strategyId);
+        if (success) {
+          const { strategyData } = useStrategyStore.getState();
+          setNodes(strategyData.nodes);
+          setEdges(strategyData.edges);
+          console.log('Loaded strategy from database');
+          return;
         }
-        if (strategy.edges) {
-          setEdges(strategy.edges);
-        }
-        console.log('Loaded strategy from localStorage');
-      } catch (error) {
-        console.error('Error loading strategy from localStorage:', error);
       }
-    }
+      
+      // Check for migration
+      if (StrategyMigration.checkForLocalStrategies() && !StrategyMigration.hasMigrated()) {
+        try {
+          const migrationSuccess = await StrategyMigration.performMigration();
+          if (migrationSuccess) {
+            toast({
+              title: "Strategies Migrated",
+              description: "Your local strategies have been migrated to the database.",
+            });
+          }
+        } catch (error) {
+          console.error('Migration failed:', error);
+          toast({
+            title: "Migration Warning",
+            description: "Some strategies couldn't be migrated. They remain in local storage.",
+            variant: "destructive",
+          });
+        }
+      }
+      
+      // Fallback: Check localStorage for current session
+      const savedStrategy = localStorage.getItem('currentStrategy');
+      if (savedStrategy && !StrategyMigration.hasMigrated()) {
+        try {
+          const strategy = JSON.parse(savedStrategy);
+          if (strategy.nodes) {
+            setNodes(strategy.nodes);
+          }
+          if (strategy.edges) {
+            setEdges(strategy.edges);
+          }
+          console.log('Loaded strategy from localStorage (fallback)');
+          
+        } catch (error) {
+          console.error('Error loading strategy from localStorage:', error);
+        }
+      }
+    };
+    
+    loadStrategy();
   }, []);
 
-  // Save strategy to localStorage whenever nodes or edges change
+  // Update strategy store when nodes/edges change
   useEffect(() => {
     if (nodes.length > 0 || edges.length > 0) {
-      const strategy = {
-        nodes,
-        edges,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('currentStrategy', JSON.stringify(strategy));
-      console.log('Auto-saved strategy to localStorage');
+      const store = useStrategyStore.getState();
+      store.updateStrategy(nodes, edges);
     }
   }, [nodes, edges]);
+
+  // Auto-save strategy to database when changes occur
+  useEffect(() => {
+    const autoSave = async () => {
+      if ((nodes.length > 0 || edges.length > 0) && currentDbStrategyId) {
+        // Only auto-save if we have an existing strategy in DB
+        try {
+          await updateStrategyInDB();
+          console.log('Auto-saved strategy to database');
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+          // Fallback to localStorage for safety
+          const strategy = {
+            nodes,
+            edges,
+            timestamp: Date.now()
+          };
+          localStorage.setItem('currentStrategy', JSON.stringify(strategy));
+        }
+      } else if (nodes.length > 0 || edges.length > 0) {
+        // Fallback to localStorage for unsaved strategies
+        const strategy = {
+          nodes,
+          edges,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('currentStrategy', JSON.stringify(strategy));
+        console.log('Auto-saved strategy to localStorage (unsaved strategy)');
+      }
+    };
+
+    const timeoutId = setTimeout(autoSave, 2000); // Debounce auto-save
+    return () => clearTimeout(timeoutId);
+  }, [nodes, edges, currentDbStrategyId, updateStrategyInDB]);
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { strategyData, exportStrategy, validateStrategy } = useStrategyStore();
+  const { exportStrategy, validateStrategy } = useStrategyStore();
+  
+  // Strategy management functions
+  const handleSaveStrategy = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to save your strategy.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Update the strategy store with current nodes and edges first
+    if (nodes.length > 0 || edges.length > 0) {
+      const store = useStrategyStore.getState();
+      store.updateStrategy(nodes, edges);
+    }
+
+    // Open the save dialog
+    setShowSaveDialog(true);
+  };
+
+  const handleSaveDialogSave = async (data: {
+    title: string;
+    description: string;
+    tags: string[];
+    privacy: 'private' | 'public' | 'marketplace';
+  }) => {
+    try {
+      // Update strategy metadata
+      setStrategyName(data.title);
+      setStrategyDescription(data.description);
+
+      if (currentDbStrategyId) {
+        // Update existing strategy
+        const result = await updateStrategyInDB(data.tags, data.privacy);
+        if (result) {
+          toast({
+            title: "Strategy Updated",
+            description: "Your strategy has been saved successfully.",
+          });
+        }
+      } else {
+        // Save new strategy
+        const result = await saveStrategyToDB(data.tags, data.privacy);
+        if (result) {
+          toast({
+            title: "Strategy Saved",
+            description: "Your strategy has been saved to your profile.",
+          });
+          // Update URL to include strategy ID
+          const url = new URL(window.location.href);
+          url.searchParams.set('strategyId', result._id);
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+    } catch (error) {
+      console.error('Save failed:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save strategy. Please try again.",
+        variant: "destructive",
+      });
+      throw error; // Re-throw to keep dialog open
+    }
+  };
+
+  const handleNewStrategy = () => {
+    createNewStrategy();
+    setNodes([]);
+    setEdges([]);
+    // Clear URL params
+    window.history.replaceState({}, '', window.location.pathname);
+    toast({
+      title: "New Strategy",
+      description: "Started a new strategy.",
+    });
+  };
   
   // Function to create flowchart layout based on node connections
   const createFlowchartLayout = useCallback((nodes: any[], edges: any[]) => {
@@ -383,6 +540,14 @@ const ProfessionalStrategyBuilder: React.FC = () => {
         // Clear the imported strategy ID so it doesn't reload on refresh
         localStorage.removeItem('imported_strategy_id');
         
+        // Set strategy name and description from imported marketplace strategy
+        if (importedStrategy.title) {
+          setStrategyName(`${importedStrategy.title} (Copy)`);
+        }
+        if (importedStrategy.description) {
+          setStrategyDescription(importedStrategy.description);
+        }
+        
         console.log('Loaded imported strategy:', importedStrategy.title, {
           nodes: flowNodes.length,
           edges: flowEdges.length
@@ -438,6 +603,15 @@ const ProfessionalStrategyBuilder: React.FC = () => {
               setNodes(spacedNodes);
               setEdges(importedStrategy.edges);
               saveToHistory(spacedNodes, importedStrategy.edges);
+              
+              // Set strategy name and description from imported data
+              if (importedStrategy.title || importedStrategy.name) {
+                setStrategyName(importedStrategy.title || importedStrategy.name);
+              }
+              if (importedStrategy.description) {
+                setStrategyDescription(importedStrategy.description);
+              }
+              
               console.log('Strategy imported successfully:', importedStrategy);
             } else {
               alert('Invalid strategy file format');
@@ -927,6 +1101,29 @@ const ProfessionalStrategyBuilder: React.FC = () => {
             </button>
             
             <div className="w-px h-6 bg-gray-600" />
+            
+            <button 
+              onClick={handleSaveStrategy}
+              disabled={strategyLoading}
+              className={`p-2 rounded-lg transition-colors ${
+                strategyLoading
+                  ? 'text-gray-600 cursor-not-allowed'
+                  : 'text-green-400 hover:text-green-300 hover:bg-green-900/20'
+              }`}
+              title={currentDbStrategyId ? "Update Strategy" : "Save Strategy"}
+            >
+              <Save size={18} />
+            </button>
+            
+            <button 
+              onClick={handleNewStrategy}
+              className="p-2 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 transition-colors"
+              title="New Strategy"
+            >
+              <FileUp size={18} />
+            </button>
+            
+            <div className="w-px h-6 bg-gray-600" />
             <button 
               onClick={handleCopyNodes}
               disabled={nodes.filter(n => n.selected).length === 0}
@@ -1298,6 +1495,17 @@ const ProfessionalStrategyBuilder: React.FC = () => {
           <StrategyMetrics isOpen={true} nodes={nodes} edges={edges} />
         </div>
       )}
+
+      {/* Save Strategy Dialog */}
+      <SaveStrategyDialog
+        open={showSaveDialog}
+        onOpenChange={setShowSaveDialog}
+        onSave={handleSaveDialogSave}
+        currentTitle={strategyData.name}
+        currentDescription={strategyData.description}
+        currentTags={[]}
+        isUpdating={!!currentDbStrategyId}
+      />
     </div>
   );
 };

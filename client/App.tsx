@@ -16,6 +16,8 @@ import Learn from "./pages/Learn";
 import Settings from "./pages/Settings";
 import Backtest from "./pages/Backtest";
 import Profile from "./pages/Profile";
+import DebugStrategies from "./pages/DebugStrategies";
+import UserStrategies from "./pages/UserStrategies";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +39,8 @@ const App = () => (
               <Route path="learn" element={<Learn />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="debug-strategies" element={<DebugStrategies />} />
+              <Route path="user-strategies" element={<UserStrategies />} />
               <Route path="backtest/:id" element={<Backtest />} />
               <Route path="*" element={<NotFound />} />
             </Route>
