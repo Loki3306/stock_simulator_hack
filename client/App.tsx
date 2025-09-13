@@ -15,6 +15,7 @@ import Marketplace from "./pages/Marketplace";
 import Learn from "./pages/Learn";
 import Settings from "./pages/Settings";
 import Backtest from "./pages/Backtest";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="builder" element={<ProfessionalStrategyBuilder />} />
               <Route path="marketplace" element={<Marketplace />} />
               <Route path="learn" element={<Learn />} />
+              <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
               <Route path="backtest/:id" element={<Backtest />} />
               <Route path="*" element={<NotFound />} />
