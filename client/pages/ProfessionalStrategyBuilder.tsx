@@ -126,25 +126,32 @@ const ProfessionalStrategyBuilder: React.FC = () => {
         }
       }
       
-      // Check for migration
-      if (StrategyMigration.checkForLocalStrategies() && !StrategyMigration.hasMigrated()) {
-        try {
-          const migrationSuccess = await StrategyMigration.performMigration();
-          if (migrationSuccess) {
-            toast({
-              title: "Strategies Migrated",
-              description: "Your local strategies have been migrated to the database.",
-            });
-          }
-        } catch (error) {
-          console.error('Migration failed:', error);
-          toast({
-            title: "Migration Warning",
-            description: "Some strategies couldn't be migrated. They remain in local storage.",
-            variant: "destructive",
-          });
-        }
+      // Check for imported strategy FIRST (before migration and localStorage)
+      const importedStrategyId = localStorage.getItem('imported_strategy_id');
+      if (importedStrategyId) {
+        console.log('Found imported strategy, skipping migration and localStorage');
+        return; // Let the import useEffect handle this
       }
+      
+      // Migration disabled to prevent 401 errors
+      // if (StrategyMigration.checkForLocalStrategies() && !StrategyMigration.hasMigrated()) {
+      //   try {
+      //     const migrationSuccess = await StrategyMigration.performMigration();
+      //     if (migrationSuccess) {
+      //       toast({
+      //         title: "Strategies Migrated",
+      //         description: "Your local strategies have been migrated to the database.",
+      //       });
+      //     }
+      //   } catch (error) {
+      //     console.error('Migration failed:', error);
+      //     toast({
+      //       title: "Migration Warning",
+      //       description: "Some strategies couldn't be migrated. They remain in local storage.",
+      //       variant: "destructive",
+      //     });
+      //   }
+      // }
       
       // Fallback: Check localStorage for current session
       const savedStrategy = localStorage.getItem('currentStrategy');
@@ -168,14 +175,10 @@ const ProfessionalStrategyBuilder: React.FC = () => {
     loadStrategy();
   }, []);
 
-  // Update strategy store when nodes/edges change
-  useEffect(() => {
-    if (nodes.length > 0 || edges.length > 0) {
-      const store = useStrategyStore.getState();
-      store.updateStrategy(nodes, edges);
-    }
-  }, [nodes, edges]);
-
+  // Removed problematic useEffect that was causing infinite loops
+  // The strategy store should be updated directly when actions occur,
+  // not through reactive useEffect watching nodes/edges changes
+  
   // Auto-save strategy to database when changes occur
   useEffect(() => {
     const autoSave = async () => {
@@ -554,7 +557,7 @@ const ProfessionalStrategyBuilder: React.FC = () => {
         });
       }
     }
-  }, [setNodes, setEdges, saveToHistory]);
+  }, []); // Remove problematic dependencies that cause infinite loops
   
   // Remove the automatic sync that was causing infinite loops
   // We'll update the store manually when needed
